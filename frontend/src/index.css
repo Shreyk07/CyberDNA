@@ -1,0 +1,109 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  --bg-canvas: #0A0A0A;
+  --bg-surface: #111111;
+  --bg-elevated: #171717;
+  --bg-hover: #1F1F1F;
+  --border-color: #292929;
+  --text-primary: #D8D8D8;
+  --text-secondary: #A0A0A0;
+  --text-muted: #777777;
+  --brand-yellow: #F2D35E;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #0A0A0A;
+  color: #D8D8D8;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #0A0A0A;
+  color: #D8D8D8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Restrained, elegant dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #292929;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+/* Precision tabular numerals */
+.font-mono-num {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+/* Editorial display font */
+.font-display {
+  font-family: 'Instrument Serif', Georgia, serif;
+}
+
+/* Minimalist border utilities */
+.border-thin {
+  border: 1px solid #292929;
+}
+
+.border-thin-b {
+  border-bottom: 1px solid #292929;
+}
+
+.border-thin-r {
+  border-right: 1px solid #292929;
+}
+
+.border-thin-t {
+  border-top: 1px solid #292929;
+}
+
+.border-thin-l {
+  border-left: 1px solid #292929;
+}
+
+/* Institutional dark card */
+.institutional-card {
+  background-color: #111111;
+  border: 1px solid #292929;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.institutional-card:hover {
+  border-color: #3D3D3D;
+}
+
+/* Editorial outlined typography */
+.text-outline-dark {
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.15);
+  color: transparent;
+}
+
+.text-outline-yellow {
+  -webkit-text-stroke: 1px rgba(242, 211, 94, 0.35);
+  color: transparent;
+}
+
+/* Subtle image overlay for cinematic contrast */
+.cinematic-contrast {
+  filter: contrast(125%) brightness(88%) grayscale(100%);
+}

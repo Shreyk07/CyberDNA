@@ -1,0 +1,19 @@
+{
+  "name": "cyberdna-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CyberDNA — Behavioral Fingerprinting & Digital Forensics Platform",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev": "concurrently -n \"FE,BE\" -c \"black.bold,gray.bold\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "test:pipeline": "python -m unittest discover -s analytics/tests -p \"test_*.py\"",
+    "run:pipeline": "python analytics/cyberdna_pipeline/cli.py --input analytics/datasets/sample_security_events.csv --output analytics/output"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
