@@ -5,6 +5,7 @@ import { PublicHomeView } from './views/PublicHomeView';
 import { LoginView } from './views/LoginView';
 import { OverviewView } from './views/OverviewView';
 import { EntityDNAView } from './views/EntityDNAView';
+import { FindingsView } from './views/FindingsView';
 import { InvestigationsView } from './views/InvestigationsView';
 import { AttackGraphView } from './views/AttackGraphView';
 import { SecurityEventsView } from './views/SecurityEventsView';
@@ -189,8 +190,9 @@ export function App() {
         onSelectView={(v) => {
           setCurrentDashboardView(v);
         }}
-        anomaliesCount={stats?.anomaliesFlagged || 3}
-        openInvestigationsCount={stats?.openInvestigationsCount || 5}
+        anomaliesCount={stats?.anomaliesIdentified || stats?.anomaliesFlagged || 3}
+        pendingFindingsCount={stats?.pendingFindingsReviewCount || 3}
+        openInvestigationsCount={stats?.openInvestigationsCount || 3}
         onLogout={handleLogout}
         onNavigateHome={() => navigateTo('home')}
         userEmail={userEmail}
@@ -208,7 +210,7 @@ export function App() {
           onSearch={handleGlobalSearch}
           onRunPipeline={handleRunPipeline}
           isPipelineRunning={isPipelineRunning}
-          totalEvents={stats?.totalEventsProcessed || 2231}
+          totalEvents={stats?.totalEventsProcessed || 2173}
           onLogout={handleLogout}
           userEmail={userEmail}
         />
@@ -229,6 +231,13 @@ export function App() {
               initialEntityId={selectedEntityId}
               onNavigateToInvestigation={handleNavigateToInvestigation}
               onCreateInvestigationFromEntity={handleCreateInvestigationFromEntity}
+            />
+          )}
+
+          {currentDashboardView === 'findings' && (
+            <FindingsView
+              onNavigateToEntity={handleNavigateToEntity}
+              onNavigateToInvestigation={handleNavigateToInvestigation}
             />
           )}
 

@@ -5,9 +5,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  X
+  X,
+  Filter,
+  User,
+  HardDrive,
+  Clock,
+  Shield,
+  Layers,
+  Info
 } from 'lucide-react';
-import type { SecurityEvent } from '../types';
+import type { ActivityEvent } from '../types';
 import { api } from '../services/api';
 
 interface SecurityEventsViewProps {
@@ -17,7 +24,7 @@ interface SecurityEventsViewProps {
 export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
   onNavigateToEntity
 }) => {
-  const [events, setEvents] = useState<SecurityEvent[]>([]);
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -25,15 +32,14 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
   const [page, setPage] = useState(0);
   const pageSize = 40;
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEventType, setSelectedEventType] = useState('ALL');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSeverity, setSelectedSeverity] = useState('ALL');
-
-  // Event detail modal state
-  const [activeEvent, setActiveEvent] = useState<SecurityEvent | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState('ALL');
+  const [activeEvent, setActiveEvent] = useState<ActivityEvent | null>(null);
 
   useEffect(() => {
     loadEvents();
-  }, [page, selectedEventType, selectedSeverity]);
+  }, [page, selectedCategory, selectedSeverity, selectedEmployee]);
 
   async function loadEvents() {
     setLoading(true);
@@ -41,8 +47,9 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
       const res = await api.getEvents({
         limit: pageSize,
         offset: page * pageSize,
-        eventType: selectedEventType !== 'ALL' ? selectedEventType : undefined,
+        category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
         severity: selectedSeverity !== 'ALL' ? selectedSeverity : undefined,
+        employeeId: selectedEmployee !== 'ALL' ? selectedEmployee : undefined,
         search: searchTerm || undefined
       });
       setEvents(res.events);
@@ -69,7 +76,7 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `cyberdna_events_page_${page + 1}.csv`);
+    link.setAttribute('download', `cyberdna_activity_log_page_${page + 1}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -77,77 +84,98 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const employeesList = [
+    { id: 'ALL', name: 'All Employees' },
+    { id: 'user:elena.rostova', name: 'Elena Rostova (Finance)' },
+    { id: 'user:marcus.wright', name: 'Marcus Wright (IT Ops)' },
+    { id: 'user:david.clark', name: 'David Clark (Engineering)' },
+    { id: 'user:alex.vance', name: 'Alex Vance (Finance)' },
+    { id: 'user:sarah.connor', name: 'Sarah Connor (Engineering)' },
+    { id: 'user:rachel.kim', name: 'Rachel Kim (HR)' },
+    { id: 'user:jonathan.hayes', name: 'Jonathan Hayes (Legal)' },
+    { id: 'user:lisa.tanaka', name: 'Lisa Tanaka (Sales)' }
+  ];
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-7xl mx-auto space-y-6 bg-[#0A0A0A] text-[#D8D8D8] animate-fade-in">
       {/* Editorial Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-widest text-[#777777] uppercase">Telemetry Event Log Stream</div>
-          <h1 className="text-3xl font-light tracking-tight text-[#D8D8D8] mt-1 font-serif">Security Events Explorer</h1>
-          <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl leading-relaxed">
-            Searchable, paginated audit log of 2,231 verified security events. Supports granular filtration by entity type, protocol, destination socket, process context, and MITRE detection rules.
+          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">
+            Employee Activity Explorer
+          </div>
+          <h1 className="text-3xl md:text-5xl font-serif font-normal tracking-tight text-white mt-1">
+            Activity <span className="italic text-[#F2D35E]">Explorer</span>
+          </h1>
+          <p className="text-xs text-[#A0A0A0] mt-1.5 font-light max-w-2xl leading-relaxed">
+            Searchable table of employee activity records including logins, file access, USB device usage, and web activity across all company departments.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportCsv}
-            className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:bg-[#222222] text-xs font-mono flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:text-[#F2D35E] hover:border-[#F2D35E] text-xs font-mono flex items-center gap-1.5 transition-colors"
           >
-            <FileDown className="w-3.5 h-3.5 text-[#777777]" />
-            Export Filtered CSV
+            <FileDown className="w-3.5 h-3.5 text-[#F2D35E]" />
+            Export Page CSV
           </button>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <form onSubmit={handleSearchSubmit} className="p-4 bg-[#111111] border border-[#292929] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
-            <input
-              type="text"
-              placeholder="Search event ID, entity, process name, source or destination IP..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#171717] text-[#D8D8D8] border border-[#292929] text-xs focus:outline-none focus:border-[#F2D35E] font-sans placeholder-[#777777]"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="px-3.5 py-1.5 bg-[#F2D35E] text-[#0A0A0A] hover:bg-[#FFE58A] text-xs font-semibold font-mono transition-colors"
-          >
-            Filter
-          </button>
-        </div>
-
-        {/* Filter Dropdowns */}
-        <div className="flex items-center gap-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#777777] font-mono text-[11px]">Type:</span>
-            <select
-              value={selectedEventType}
-              onChange={(e) => { setSelectedEventType(e.target.value); setPage(0); }}
-              className="bg-[#171717] border border-[#292929] px-2 py-1 text-[#D8D8D8] focus:outline-none focus:border-[#F2D35E] font-mono text-xs"
+      {/* Granular Filtering Control Bar */}
+      <div className="p-4 bg-[#111111] border border-[#292929] space-y-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+              <input
+                type="text"
+                placeholder="Search by employee, activity, process, or resource..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-[#171717] text-[#D8D8D8] border border-[#292929] text-xs font-mono focus:outline-none focus:border-[#F2D35E]"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-xs font-mono text-white hover:border-[#F2D35E] transition-colors"
             >
-              <option value="ALL">All Event Types</option>
-              <option value="AUTH_SUCCESS">AUTH_SUCCESS</option>
-              <option value="AUTH_FAILURE">AUTH_FAILURE</option>
-              <option value="PROCESS_SPAWN">PROCESS_SPAWN</option>
-              <option value="LATERAL_MOVEMENT">LATERAL_MOVEMENT</option>
-              <option value="DATA_EXFILTRATION">DATA_EXFILTRATION</option>
-              <option value="NETWORK_CONNECTION">NETWORK_CONNECTION</option>
-              <option value="DNS_QUERY">DNS_QUERY</option>
-            </select>
+              Search
+            </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#777777] font-mono text-[11px]">Severity:</span>
+          <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+            {/* Employee Selector */}
+            <select
+              value={selectedEmployee}
+              onChange={(e) => { setSelectedEmployee(e.target.value); setPage(0); }}
+              className="bg-[#171717] border border-[#292929] px-2.5 py-1.5 text-white focus:outline-none focus:border-[#F2D35E]"
+            >
+              {employeesList.map(e => (
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </select>
+
+            {/* Category Filter */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setPage(0); }}
+              className="bg-[#171717] border border-[#292929] px-2.5 py-1.5 text-white focus:outline-none focus:border-[#F2D35E]"
+            >
+              <option value="ALL">All Activity Types</option>
+              <option value="LOGON">Login Activity</option>
+              <option value="FILE">File Access</option>
+              <option value="REMOVABLE">USB Device Usage</option>
+              <option value="WEB_CLOUD">Web & Cloud Activity</option>
+              <option value="EMAIL">Email Activity</option>
+            </select>
+
+            {/* Severity Filter */}
             <select
               value={selectedSeverity}
               onChange={(e) => { setSelectedSeverity(e.target.value); setPage(0); }}
-              className="bg-[#171717] border border-[#292929] px-2 py-1 text-[#D8D8D8] focus:outline-none focus:border-[#F2D35E] font-mono text-xs"
+              className="bg-[#171717] border border-[#292929] px-2.5 py-1.5 text-white focus:outline-none focus:border-[#F2D35E]"
             >
               <option value="ALL">All Severities</option>
               <option value="CRITICAL">Critical</option>
@@ -157,194 +185,234 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
               <option value="INFO">Info</option>
             </select>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
 
-      {/* Table Container */}
+      {/* Events Table */}
       <div className="bg-[#111111] border border-[#292929] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#292929] bg-[#171717] text-[11px] font-mono text-[#777777] uppercase tracking-wider">
-                <th className="py-3 px-4">Timestamp (UTC)</th>
-                <th className="py-3 px-4">Event Identifier</th>
-                <th className="py-3 px-4">Event Type</th>
-                <th className="py-3 px-4">Associated Entity</th>
-                <th className="py-3 px-4">Socket Direction</th>
-                <th className="py-3 px-4">Process / Rule</th>
-                <th className="py-3 px-4 text-center">Severity</th>
-                <th className="py-3 px-4 text-center">Detail</th>
+              <tr className="border-b border-[#292929] bg-[#171717] text-[10px] font-mono text-[#777777] uppercase tracking-wider">
+                <th className="py-2.5 px-3">Event ID</th>
+                <th className="py-2.5 px-3">Time (UTC)</th>
+                <th className="py-2.5 px-3">Employee</th>
+                <th className="py-2.5 px-3">Activity Type</th>
+                <th className="py-2.5 px-3">Resource / Details</th>
+                <th className="py-2.5 px-3">Destination / Device</th>
+                <th className="py-2.5 px-3 text-right">Data Volume</th>
+                <th className="py-2.5 px-3 text-center">Alert Level</th>
+                <th className="py-2.5 px-3 text-center">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#292929] text-xs font-mono">
-              {events.map((evt) => (
-                <tr
-                  key={evt.event_id}
-                  onClick={() => setActiveEvent(evt)}
-                  className="hover:bg-[#171717]/80 cursor-pointer transition-colors"
-                >
-                  <td className="py-2.5 px-4 text-[#777777] whitespace-nowrap text-[11px]">
-                    {evt.timestamp.replace('T', ' ').slice(0, 19)}
-                  </td>
-                  <td className="py-2.5 px-4 font-medium text-[#D8D8D8]">
-                    {evt.event_id}
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className="px-1.5 py-0.5 bg-[#171717] border border-[#292929] text-[11px] text-[#A0A0A0]">
-                      {evt.event_type}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-[#D8D8D8]">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onNavigateToEntity(evt.entity_id);
-                      }}
-                      className="text-[#F2D35E] hover:underline flex items-center gap-1"
-                    >
-                      {evt.entity_id}
-                      <ExternalLink className="w-2.5 h-2.5 text-[#777777]" />
-                    </button>
-                  </td>
-                  <td className="py-2.5 px-4 text-[#777777] text-[11px] whitespace-nowrap">
-                    {evt.source_ip} &rarr; {evt.destination_ip}:{evt.destination_port}
-                  </td>
-                  <td className="py-2.5 px-4 font-sans text-[#A0A0A0] text-[11px] truncate max-w-xs">
-                    {evt.process_name || evt.rule_triggered}
-                  </td>
-                  <td className="py-2.5 px-4 text-center">
-                    <span className={`text-[10px] px-2 py-0.5 border ${
-                      evt.severity === 'CRITICAL' ? 'border-rose-500/50 text-rose-400 bg-rose-950/40 font-semibold' :
-                      evt.severity === 'HIGH' ? 'border-rose-500/30 text-rose-400 bg-rose-950/20' :
-                      evt.severity === 'MEDIUM' ? 'border-amber-500/30 text-amber-400 bg-amber-950/20' :
-                      'border-[#292929] text-[#777777] bg-[#171717]'
-                    }`}>
-                      {evt.severity}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-center font-sans">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveEvent(evt);
-                      }}
-                      className="px-2 py-0.5 text-[11px] border border-[#292929] bg-[#171717] hover:bg-[#222222] text-[#A0A0A0] hover:text-[#D8D8D8] transition-colors"
-                    >
-                      Inspect
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-[#777777]">
+                    Loading verified telemetry records...
                   </td>
                 </tr>
-              ))}
+              ) : events.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-[#777777]">
+                    No security events match the current filter criteria.
+                  </td>
+                </tr>
+              ) : (
+                events.map((evt) => {
+                  const isCritical = evt.severity === 'CRITICAL';
+                  const isHigh = evt.severity === 'HIGH';
+                  const isUsb = evt.event_type.includes('REMOVABLE') || evt.event_type.includes('USB');
+
+                  return (
+                    <tr
+                      key={evt.event_id}
+                      onClick={() => setActiveEvent(evt)}
+                      className={`hover:bg-[#171717] cursor-pointer transition-colors ${
+                        isUsb ? 'bg-[#1C180E]' : ''
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 text-[#F2D35E] font-medium">
+                        {evt.event_id}
+                      </td>
+                      <td className="py-2.5 px-3 text-[11px] text-[#A0A0A0]">
+                        {new Date(evt.timestamp).toUTCString().slice(5, 25)}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigateToEntity(evt.employee_id || evt.entity_id);
+                          }}
+                          className="hover:text-[#F2D35E] text-white flex items-center gap-1.5 transition-colors font-sans"
+                        >
+                          <span>{evt.employee_name || evt.employee_id}</span>
+                          <ExternalLink className="w-2.5 h-2.5 text-[#777777]" />
+                        </button>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-1.5 py-0.5 border text-[10px] ${
+                          isUsb
+                            ? 'border-[#52441A] bg-[#2E2812] text-[#F2D35E] font-semibold'
+                            : 'border-[#292929] bg-[#141414] text-[#D8D8D8]'
+                        }`}>
+                          {evt.event_type}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-white truncate max-w-[200px]" title={evt.process_name || evt.target_resource}>
+                        {evt.process_name || evt.target_resource}
+                      </td>
+                      <td className="py-2.5 px-3 text-[#A0A0A0]">
+                        {evt.destination_ip}:{evt.destination_port}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-white">
+                        {evt.bytes_transferred > 1_000_000
+                          ? `${(evt.bytes_transferred / (1024*1024)).toFixed(1)} MB`
+                          : `${evt.bytes_transferred.toLocaleString()} B`}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`px-2 py-0.5 text-[10px] font-mono border ${
+                          isCritical
+                            ? 'bg-[#3D1414] text-[#FF7A7A] border-[#5E1E1E]'
+                            : isHigh
+                            ? 'bg-[#2E2812] text-[#F2D35E] border-[#52441A]'
+                            : 'bg-[#141414] text-[#777777] border-[#292929]'
+                        }`}>
+                          {evt.severity}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveEvent(evt);
+                          }}
+                          className="text-[10px] text-[#777777] hover:text-[#F2D35E] border border-[#292929] px-2 py-0.5 bg-[#141414]"
+                        >
+                          Inspect
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination Bar */}
-        <div className="p-4 border-t border-[#292929] bg-[#141414] flex items-center justify-between text-xs text-[#A0A0A0]">
+        <div className="p-3 bg-[#171717] border-t border-[#292929] flex items-center justify-between font-mono text-xs text-[#A0A0A0]">
           <div>
-            Showing <span className="font-mono font-medium text-[#D8D8D8]">{page * pageSize + 1}</span> to{' '}
-            <span className="font-mono font-medium text-[#D8D8D8]">{Math.min((page + 1) * pageSize, totalCount)}</span> of{' '}
-            <span className="font-mono font-medium text-[#D8D8D8]">{totalCount.toLocaleString()}</span> records
+            Showing {events.length > 0 ? page * pageSize + 1 : 0} to {Math.min((page + 1) * pageSize, totalCount)} of {totalCount} records
           </div>
-
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setPage(prev => Math.max(0, prev - 1))}
+              onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="px-2.5 py-1 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:bg-[#202020] disabled:opacity-30 flex items-center gap-1 transition-colors"
+              className="p-1.5 border border-[#292929] bg-[#111111] hover:border-[#F2D35E] disabled:opacity-30 disabled:hover:border-[#292929]"
             >
-              <ChevronLeft className="w-3.5 h-3.5" /> Previous
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <span className="font-mono text-[#777777] text-[11px] px-2">
-              Page {page + 1} of {Math.max(1, totalPages)}
+            <span>
+              Page {page + 1} of {Math.max(totalPages, 1)}
             </span>
             <button
-              onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="px-2.5 py-1 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:bg-[#202020] disabled:opacity-30 flex items-center gap-1 transition-colors"
+              className="p-1.5 border border-[#292929] bg-[#111111] hover:border-[#F2D35E] disabled:opacity-30 disabled:hover:border-[#292929]"
             >
-              Next <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Event Details Drawer */}
+      {/* Raw Event Traceability Modal */}
       {activeEvent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111111] border border-[#292929] max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111111] border border-[#F2D35E] w-full max-w-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between border-b border-[#292929] pb-3">
-              <div>
-                <span className="font-mono text-[10px] text-[#777777] uppercase">Raw Telemetry Inspector</span>
-                <h3 className="text-base font-mono font-medium text-[#D8D8D8] mt-0.5">
-                  {activeEvent.event_id} ({activeEvent.event_type})
-                </h3>
+              <div className="flex items-center gap-2 font-mono text-xs text-[#F2D35E]">
+                <span>TELEMETRY TRACEABILITY</span>
+                <span>•</span>
+                <span>{activeEvent.event_id}</span>
               </div>
               <button
                 onClick={() => setActiveEvent(null)}
-                className="text-[#777777] hover:text-[#D8D8D8] transition-colors"
+                className="text-[#777777] hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Timestamp</span>
-                <span className="text-[#D8D8D8]">{activeEvent.timestamp}</span>
+            <div className="space-y-3 font-mono text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 bg-[#171717] border border-[#292929]">
+                <div>
+                  <span className="text-[#777777] block text-[10px]">EMPLOYEE / SUBJECT</span>
+                  <span className="text-white font-medium">{activeEvent.employee_name || activeEvent.employee_id}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">EVENT CLASSIFICATION</span>
+                  <span className="text-[#F2D35E] font-medium">{activeEvent.event_type}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">DEVICE / WORKSTATION</span>
+                  <span className="text-white">{activeEvent.device_id || 'WS-FIN-01'}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">TIMESTAMP (UTC)</span>
+                  <span className="text-white">{new Date(activeEvent.timestamp).toUTCString()}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">SOURCE SOCKET</span>
+                  <span className="text-white">{activeEvent.source_ip}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">DESTINATION SOCKET</span>
+                  <span className="text-white">{activeEvent.destination_ip}:{activeEvent.destination_port}</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">PAYLOAD VOLUME</span>
+                  <span className="text-white">{activeEvent.bytes_transferred.toLocaleString()} bytes</span>
+                </div>
+                <div>
+                  <span className="text-[#777777] block text-[10px]">DIURNAL CONTEXT</span>
+                  <span className={activeEvent.is_off_hours ? 'text-[#FF7A7A]' : 'text-[#10B981]'}>
+                    {activeEvent.is_off_hours ? 'OFF-HOURS TIMING' : 'NORMAL BUSINESS HOURS'}
+                  </span>
+                </div>
               </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Severity</span>
-                <span className="text-[#D8D8D8] font-semibold">{activeEvent.severity}</span>
+
+              <div>
+                <span className="text-[#777777] block text-[10px] mb-1">BINARY PROCESS / RESOURCE TARGET</span>
+                <div className="p-2.5 bg-[#0A0A0A] border border-[#292929] text-white break-all">
+                  {activeEvent.process_name || activeEvent.target_resource}
+                </div>
               </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Entity ID</span>
-                <span className="text-[#F2D35E]">{activeEvent.entity_id}</span>
-              </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Entity Type</span>
-                <span className="text-[#D8D8D8]">{activeEvent.entity_type}</span>
-              </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Source Socket</span>
-                <span className="text-[#D8D8D8]">{activeEvent.source_ip}</span>
-              </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Destination Socket</span>
-                <span className="text-[#D8D8D8]">{activeEvent.destination_ip}:{activeEvent.destination_port}</span>
-              </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Process / Command</span>
-                <span className="text-[#D8D8D8] truncate block">{activeEvent.process_name || 'N/A'}</span>
-              </div>
-              <div className="p-2.5 bg-[#171717] border border-[#292929]">
-                <span className="text-[#777777] block text-[10px]">Volume Transferred</span>
-                <span className="text-[#D8D8D8]">{activeEvent.bytes_transferred ? `${activeEvent.bytes_transferred} bytes` : '0'}</span>
+
+              <div>
+                <span className="text-[#777777] block text-[10px] mb-1">CORRELATION RULE TRIGGERED</span>
+                <div className="p-2.5 bg-[#0A0A0A] border border-[#292929] text-[#F2D35E]">
+                  {activeEvent.rule_triggered}
+                </div>
               </div>
             </div>
 
-            <div>
-              <span className="text-[11px] font-mono text-[#777777] uppercase block mb-1">Detection Rule Triggered</span>
-              <div className="p-2.5 bg-[#171717] border border-[#292929] font-mono text-xs text-[#D8D8D8]">
-                {activeEvent.rule_triggered}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#292929]">
+            <div className="pt-3 border-t border-[#292929] flex justify-end gap-3 font-mono text-xs">
               <button
                 onClick={() => {
-                  onNavigateToEntity(activeEvent.entity_id);
+                  onNavigateToEntity(activeEvent.employee_id || activeEvent.entity_id);
                   setActiveEvent(null);
                 }}
-                className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:bg-[#202020] text-xs font-normal transition-colors"
+                className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-white hover:border-[#F2D35E]"
               >
-                Inspect Entity Profile
+                Inspect Employee Profile
               </button>
               <button
                 onClick={() => setActiveEvent(null)}
-                className="px-4 py-1.5 bg-[#F2D35E] text-[#0A0A0A] hover:bg-[#FFE58A] text-xs font-semibold transition-colors"
+                className="px-3 py-1.5 bg-[#F2D35E] text-[#0A0A0A] font-medium hover:bg-[#FFE58A]"
               >
-                Close
+                Close Trace
               </button>
             </div>
           </div>

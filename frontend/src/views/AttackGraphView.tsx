@@ -148,10 +148,12 @@ export const AttackGraphView: React.FC<AttackGraphViewProps> = ({
       {/* Editorial Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-widest text-[#777777] uppercase">Grounded Relationship Telemetry</div>
-          <h1 className="text-3xl font-light tracking-tight text-[#D8D8D8] mt-1 font-serif">Interactive Attack Graph</h1>
-          <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl leading-relaxed">
-            Topology of interactions grounded strictly in verified event logs. Nodes depict identities, endpoints, domain controllers, and external endpoints; edges reflect observed network connections and lateral movement tactics.
+          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">Grounded Relationship Telemetry</div>
+          <h1 className="text-3xl md:text-5xl font-serif font-normal tracking-tight text-white mt-1">
+            Organizational <span className="italic text-[#F2D35E]">Activity Graph</span>
+          </h1>
+          <p className="text-xs text-[#A0A0A0] mt-1.5 font-light max-w-2xl leading-relaxed">
+            Topology of interactions grounded strictly in verified event records. Nodes represent employees, workstations, corporate domain controllers, confidential file shares, removable USB media, and external synchronization endpoints; edges reflect observed authenticated sessions and transfers.
           </p>
         </div>
 

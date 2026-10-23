@@ -1,6 +1,10 @@
 import {
+  EmployeeSummary,
   EntitySummary,
+  Device,
+  ThreatFinding,
   BehavioralProfile,
+  ActivityEvent,
   SecurityEvent,
   Investigation,
   InvestigationNote,
@@ -32,30 +36,75 @@ export const api = {
     return fetchJson<any>('/stats/overview');
   },
 
-  async getEntities(params?: { type?: string; anomalous?: boolean; search?: string }) {
+  async getEmployees(params?: { department?: string; anomalous?: boolean; search?: string }) {
     const q = new URLSearchParams();
-    if (params?.type) q.set('type', params.type);
-    if (params?.anomalous) q.set('anomalous', 'true');
+    if (params?.department) q.set('department', params.department);
+    if (params?.anomalous !== undefined) q.set('anomalous', String(params.anomalous));
     if (params?.search) q.set('search', params.search);
-    return fetchJson<EntitySummary[]>(`/entities?${q.toString()}`);
+    return fetchJson<EmployeeSummary[]>(`/employees?${q.toString()}`);
+  },
+
+  async getEmployeeDetail(id: string) {
+    return fetchJson<{ employee: EmployeeSummary; entity: EmployeeSummary; profile?: BehavioralProfile; findings?: ThreatFinding[] }>(`/employees/${encodeURIComponent(id)}`);
+  },
+
+  // Alias for backward compatibility
+  async getEntities(params?: { type?: string; anomalous?: boolean; search?: string }) {
+    return this.getEmployees(params);
   },
 
   async getEntityDetail(id: string) {
-    return fetchJson<{ entity: EntitySummary; profile?: BehavioralProfile }>(`/entities/${encodeURIComponent(id)}`);
+    return this.getEmployeeDetail(id);
   },
 
-  async getEvents(params?: { entityId?: string; eventType?: string; severity?: string; search?: string; limit?: number; offset?: number }) {
+  async getDevices() {
+    return fetchJson<Device[]>('/devices');
+  },
+
+  async getFindings(params?: { employeeId?: string; category?: string; reviewStatus?: string }) {
+    const q = new URLSearchParams();
+    if (params?.employeeId) q.set('employeeId', params.employeeId);
+    if (params?.category) q.set('category', params.category);
+    if (params?.reviewStatus) q.set('reviewStatus', params.reviewStatus);
+    return fetchJson<ThreatFinding[]>(`/findings?${q.toString()}`);
+  },
+
+  async getFindingDetail(id: string) {
+    return fetchJson<ThreatFinding & { supportingEvents?: ActivityEvent[] }>(`/findings/${encodeURIComponent(id)}`);
+  },
+
+  async updateFindingStatus(id: string, status: 'NEW' | 'UNDER_REVIEW' | 'ESCALATED' | 'BENIGN' | 'RESOLVED') {
+    return fetchJson<ThreatFinding>(`/findings/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  async getEvents(params?: {
+    entityId?: string;
+    employeeId?: string;
+    eventType?: string;
+    category?: string;
+    severity?: string;
+    deviceId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) {
     const q = new URLSearchParams();
     if (params?.entityId) q.set('entityId', params.entityId);
+    if (params?.employeeId) q.set('employeeId', params.employeeId);
     if (params?.eventType) q.set('eventType', params.eventType);
+    if (params?.category) q.set('category', params.category);
     if (params?.severity) q.set('severity', params.severity);
+    if (params?.deviceId) q.set('deviceId', params.deviceId);
     if (params?.search) q.set('search', params.search);
     if (params?.limit) q.set('limit', String(params.limit));
     if (params?.offset) q.set('offset', String(params.offset));
     
     const res = await fetch(`${API_BASE}/events?${q.toString()}`);
     const json = await res.json();
-    return { total: json.total || 0, events: (json.data || []) as SecurityEvent[] };
+    return { total: json.total || 0, events: (json.data || []) as ActivityEvent[] };
   },
 
   async getInvestigations() {

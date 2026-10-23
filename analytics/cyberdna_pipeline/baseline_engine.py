@@ -1,5 +1,5 @@
 """
-Behavioral Baseline Construction & Mathematical Deviation Engine
+Behavioral Baseline Construction & Mathematical Deviation Engine for Insider Threat Analytics
 """
 from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
@@ -12,16 +12,20 @@ except (ImportError, ValueError):
 MINIMUM_EVENTS_FOR_BASELINE = 10
 EPSILON = 1e-5
 
-# Feature weights in composite behavioral deviation score
+# Feature weights in composite behavioral deviation score for insider threat detection
 FEATURE_WEIGHTS = {
-    "off_hours_ratio": 1.5,
-    "auth_failure_ratio": 2.5,
+    "off_hours_ratio": 2.0,
+    "usb_transfer_count": 2.5,
+    "usb_transfer_mbytes": 3.0,
+    "cloud_upload_mbytes": 3.0,
+    "file_events_count": 1.8,
+    "auth_failure_ratio": 2.2,
     "auth_failure_count": 2.0,
     "unique_destinations": 1.2,
     "destination_diversity": 1.4,
-    "total_mbytes_transferred": 2.0,
+    "total_mbytes_transferred": 2.2,
     "events_per_hour": 1.1,
-    "hourly_entropy": 1.0,
+    "hourly_entropy": 1.5,
     "unique_processes": 1.3
 }
 
@@ -52,16 +56,17 @@ class BaselineEngine:
         current_events: pd.DataFrame
     ) -> Dict[str, Any]:
         """
-        Builds rigorous baseline vs current comparison for an individual entity.
-        Adheres to Master's research standard:
-        1. Checks sufficient observation volume.
-        2. Computes parametric (Mean, Std) and non-parametric (Median, IQR, MAD) bounds.
-        3. Computes individual feature z-scores and modified z-scores.
+        Builds rigorous baseline vs current comparison for an individual employee/entity.
+        Adheres to research standards:
+        1. Checks sufficient observation volume (Minimum History Safeguard).
+        2. Computes parametric (Mean, Std) and non-parametric bounds.
+        3. Computes individual feature z-scores and deviation severities.
         4. Calculates weighted Behavioral Deviation Index (BDI).
         """
         n_base = len(baseline_events)
         n_curr = len(current_events)
 
+        # Minimum History Safeguard: refuse to fabricate scores if observations < 10
         if n_base < MINIMUM_EVENTS_FOR_BASELINE:
             return {
                 "entity_id": entity_id,
@@ -71,7 +76,8 @@ class BaselineEngine:
                 "current_event_count": n_curr,
                 "behavioral_deviation_index": 0.0,
                 "is_anomalous": False,
-                "feature_deviations": []
+                "feature_deviations": [],
+                "explanation": f"Insufficient historical telemetry ({n_base} records). Minimum history safeguard active."
             }
 
         base_feats = FeatureEngineer.extract_entity_features(baseline_events)
@@ -87,10 +93,8 @@ class BaselineEngine:
 
             curr_val = curr_feats.get(feat_name, base_val)
 
-            # Robust standard deviation proxy if historical slice is aggregated:
-            # We estimate standard deviation proportional to variance
+            # Robust standard deviation proxy
             std_proxy = max(abs(base_val * 0.25), 0.1)
-
             diff = curr_val - base_val
             z_score = diff / (std_proxy + EPSILON)
 
@@ -98,10 +102,8 @@ class BaselineEngine:
             weighted_sq_diff_sum += weight * (z_score ** 2)
             total_weight += weight
 
-            # Percent change
             pct_change = ((curr_val - base_val) / (abs(base_val) + EPSILON)) * 100.0 if base_val != 0 else (100.0 if curr_val > 0 else 0.0)
 
-            # Severity per feature
             abs_z = abs(z_score)
             if abs_z >= 3.0:
                 severity = "HIGH"
@@ -125,9 +127,15 @@ class BaselineEngine:
 
         # Calculate BDI: 0 to 100
         rms_deviation = np.sqrt(weighted_sq_diff_sum / max(total_weight, 1.0))
-        bdi = min(100.0, round(float(rms_deviation * 22.0), 1))
-
+        bdi = min(100.0, round(float(rms_deviation * 20.0), 1))
         is_anomalous = bdi >= 50.0
+
+        top_deviations = [f["feature"] for f in feature_deviations if f["severity"] in ["HIGH", "MEDIUM"]]
+        explanation = (
+            f"Observed statistically significant shift (BDI: {bdi}/100) across {', '.join(top_deviations[:3])}."
+            if is_anomalous else
+            "Observed activity remains consistent with employee's historical baseline profile."
+        )
 
         return {
             "entity_id": entity_id,
@@ -137,5 +145,8 @@ class BaselineEngine:
             "behavioral_deviation_index": bdi,
             "is_anomalous": is_anomalous,
             "feature_deviations": sorted(feature_deviations, key=lambda x: abs(x["z_score"]), reverse=True),
-            "top_deviating_features": [f["feature"] for f in feature_deviations if f["severity"] in ["HIGH", "MEDIUM"]]
+            "top_deviating_features": top_deviations,
+            "entropy_baseline": base_feats.get("hourly_entropy", 3.8),
+            "entropy_current": curr_feats.get("hourly_entropy", 3.8),
+            "explanation": explanation
         }

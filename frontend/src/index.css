@@ -107,3 +107,182 @@ body {
 .cinematic-contrast {
   filter: contrast(125%) brightness(88%) grayscale(100%);
 }
+
+/* =========================================================================
+   NEXBANK-INSPIRED CINEMATIC MOTION SYSTEM
+   ========================================================================= */
+
+:root {
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Scroll triggered reveals */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 1.1s var(--ease-cinematic), transform 1.1s var(--ease-cinematic);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-reveal-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: opacity 1.1s var(--ease-cinematic), transform 1.1s var(--ease-cinematic);
+}
+
+.scroll-reveal-left.is-revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Stagger delays */
+.delay-100 { transition-delay: 100ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-400 { transition-delay: 400ms; }
+.delay-500 { transition-delay: 500ms; }
+.delay-600 { transition-delay: 600ms; }
+
+/* Masked headline line reveal */
+.headline-reveal-wrapper {
+  overflow: visible;
+  display: block;
+}
+
+.headline-reveal-line {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  transition: transform 1s var(--ease-cinematic), opacity 1s var(--ease-cinematic);
+}
+
+.hero-entering .headline-reveal-line {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.hero-active .headline-reveal-line {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Cinematic image zoom and reveal */
+.image-reveal-frame {
+  overflow: hidden;
+  position: relative;
+  background-color: #111111;
+}
+
+.image-reveal-img {
+  transition: transform 1.8s var(--ease-cinematic), filter 1.8s var(--ease-cinematic);
+  transform: scale(1.08);
+  filter: brightness(0.82) contrast(1.15) grayscale(100%);
+  will-change: transform, filter;
+}
+
+.is-revealed .image-reveal-img,
+.image-revealed .image-reveal-img {
+  transform: scale(1.0);
+  filter: brightness(0.92) contrast(1.1) grayscale(100%);
+}
+
+.image-reveal-frame:hover .image-reveal-img {
+  transform: scale(1.03);
+  filter: brightness(0.98) contrast(1.1) grayscale(90%);
+}
+
+/* Subtle yellow accent reveal bar */
+.accent-line-reveal {
+  width: 0%;
+  height: 2px;
+  background-color: #F2D35E;
+  transition: width 1.2s var(--ease-cinematic);
+}
+
+.is-revealed .accent-line-reveal {
+  width: 100%;
+}
+
+/* Smooth link hover effect with yellow underline */
+.hover-underline-yellow {
+  position: relative;
+  display: inline-block;
+}
+
+.hover-underline-yellow::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background-color: #F2D35E;
+  transform-origin: bottom right;
+  transition: transform 0.35s var(--ease-cinematic);
+}
+
+.hover-underline-yellow:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Keyframes for Hero animations */
+@keyframes heroFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero-fadeup {
+  animation: heroFadeUp 1.2s var(--ease-cinematic) forwards;
+}
+
+/* Pulse animation for high risk nodes */
+@keyframes yellowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(242, 211, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(242, 211, 94, 0);
+  }
+}
+
+.animate-yellow-pulse {
+  animation: yellowPulse 3s infinite var(--ease-smooth);
+}
+
+/* Prefers-reduced-motion safety */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .scroll-reveal,
+  .scroll-reveal-left,
+  .headline-reveal-line {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .image-reveal-img {
+    transform: none !important;
+    filter: none !important;
+  }
+}

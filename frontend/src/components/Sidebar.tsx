@@ -11,13 +11,15 @@ import {
   Settings,
   ChevronRight,
   LogOut,
-  Globe
+  Globe,
+  AlertTriangle
 } from 'lucide-react';
 import { CyberDNALogo } from './CyberDNALogo';
 
 export type NavItem = 
   | 'overview'
   | 'entities'
+  | 'findings'
   | 'investigations'
   | 'graph'
   | 'events'
@@ -30,6 +32,7 @@ interface SidebarProps {
   currentView: NavItem;
   onSelectView: (view: NavItem) => void;
   anomaliesCount: number;
+  pendingFindingsCount?: number;
   openInvestigationsCount: number;
   onLogout: () => void;
   onNavigateHome: () => void;
@@ -40,20 +43,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
   onSelectView,
   anomaliesCount,
+  pendingFindingsCount = 3,
   openInvestigationsCount,
   onLogout,
   onNavigateHome,
   userEmail = 'analyst.demo@cyberdna.research'
 }) => {
   const navItems = [
-    { id: 'overview' as NavItem, label: 'Overview', icon: LayoutDashboard },
-    { id: 'entities' as NavItem, label: 'Entity DNA', icon: Fingerprint, badge: anomaliesCount > 0 ? `${anomaliesCount} alerts` : undefined },
+    { id: 'overview' as NavItem, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'entities' as NavItem, label: 'Employees', icon: Fingerprint, badge: anomaliesCount > 0 ? `${anomaliesCount} alerts` : undefined },
+    { id: 'events' as NavItem, label: 'Activity Explorer', icon: Terminal },
+    { id: 'findings' as NavItem, label: 'Security Alerts', icon: AlertTriangle, badge: pendingFindingsCount > 0 ? `${pendingFindingsCount} review` : undefined },
     { id: 'investigations' as NavItem, label: 'Investigations', icon: ShieldAlert, badge: openInvestigationsCount > 0 ? `${openInvestigationsCount} active` : undefined },
-    { id: 'graph' as NavItem, label: 'Attack Graph', icon: Share2 },
-    { id: 'events' as NavItem, label: 'Security Events', icon: Terminal },
-    { id: 'analytics' as NavItem, label: 'Analytics', icon: BarChart3 },
+    { id: 'graph' as NavItem, label: 'Activity Graph', icon: Share2 },
+    { id: 'analytics' as NavItem, label: 'PySpark Pipeline', icon: BarChart3 },
     { id: 'datasources' as NavItem, label: 'Data Sources', icon: Database },
-    { id: 'methodology' as NavItem, label: 'Methodology', icon: BookOpen },
     { id: 'settings' as NavItem, label: 'Settings', icon: Settings },
   ];
 

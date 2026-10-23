@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  Database,
+  FileCode,
+  Download,
+  FolderOpen,
+  Terminal,
+  Info
 } from 'lucide-react';
 import type { DataSourceMeta } from '../types';
 import { api } from '../services/api';
@@ -13,8 +19,9 @@ export const DataSourcesView: React.FC = () => {
 
   // Ingestion validation sandbox state
   const [sampleInput, setSampleInput] = useState(`timestamp,event_id,event_type,entity_id,entity_type,severity,source_ip,destination_ip,destination_port,protocol,bytes_transferred,process_name
-2026-10-24T00:15:00Z,EVT-UPLOAD-01,AUTH_SUCCESS,user:test.operator,USER,INFO,10.0.1.25,10.0.2.10,443,TCP,4200,browser.exe
-2026-10-24T00:15:20Z,EVT-UPLOAD-02,AUTH_FAILURE,user:test.operator,USER,MEDIUM,198.51.100.9,10.0.2.10,443,TCP,820,vpn_client.exe`);
+2026-10-16T20:30:00Z,EVT-INSD-DEMO-01,FILE_COPY,user:elena.rostova,EMPLOYEE,HIGH,10.0.1.45,10.0.0.15,445,SMB,850000000,robocopy.exe
+2026-10-16T20:45:00Z,EVT-INSD-DEMO-02,REMOVABLE_COPY,user:elena.rostova,EMPLOYEE,CRITICAL,10.0.1.45,usb:SANDISK,0,USB,850000000,explorer.exe
+2026-10-17T23:15:00Z,EVT-INSD-DEMO-03,PROCESS_EXECUTION,user:marcus.wright,EMPLOYEE,CRITICAL,10.0.3.12,10.0.0.10,3389,RDP,0,mimikatz.exe`);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
 
@@ -68,7 +75,7 @@ export const DataSourcesView: React.FC = () => {
         recordCount: lines.length - 1,
         headersPresent: headers,
         status: 'SCHEMA_COMPLIANT',
-        message: 'All mandatory cyber telemetry constraints verified. Ready for baseline partition ingestion.'
+        message: 'All mandatory enterprise insider-threat telemetry constraints verified. Ready for PySpark baseline ingestion.'
       });
     } catch (err: any) {
       setValidationResult({
@@ -81,151 +88,168 @@ export const DataSourcesView: React.FC = () => {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-[#0A0A0A] text-[#D8D8D8] animate-fade-in">
       {/* Editorial Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-widest text-[#777777] uppercase">Ingestion Architecture</div>
-          <h1 className="text-3xl font-light tracking-tight text-[#D8D8D8] mt-1 font-serif">Data Sources & Provenance</h1>
-          <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl leading-relaxed">
-            Ingestion pipelines supporting CSV, JSON, and Apache Parquet columnar storage. Schema validation guarantees field constraints and timestamp sanity before baseline model training.
+          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">
+            Ingestion Architecture & Provenance
+          </div>
+          <h1 className="text-3xl md:text-5xl font-serif font-normal tracking-tight text-white mt-1">
+            Data Sources & <span className="italic text-[#F2D35E]">CERT Integration</span>
+          </h1>
+          <p className="text-xs text-[#A0A0A0] mt-1.5 font-light max-w-2xl leading-relaxed">
+            Ingestion pipelines supporting CSV telemetry streams and PySpark Apache Parquet columnar storage. Schema validation guarantees field constraints and timestamp sanity before behavioral modeling.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono px-2.5 py-1 bg-[#111111] border border-[#292929] text-[#A0A0A0]">
-            Parquet Storage Engine Active
+          <span className="text-[11px] font-mono px-3 py-1 bg-[#111111] border border-[#292929] text-[#10B981] flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Parquet Engine Active
           </span>
         </div>
       </div>
 
-      {/* Data Sources Table */}
-      <div className="bg-[#111111] border border-[#292929] overflow-hidden">
-        <div className="p-4 border-b border-[#292929] bg-[#171717] flex items-center justify-between">
-          <h3 className="text-xs font-mono uppercase text-[#777777] tracking-wider">
-            Registered Datasets & Telemetry Partitions
-          </h3>
-          <span className="text-xs text-[#A0A0A0] font-mono">{dataSources.length} Datasets</span>
+      {/* Real CERT Dataset Acquisition & Integration Guide */}
+      <div className="p-6 bg-[#111111] border border-[#292929] space-y-4">
+        <div className="border-b border-[#292929] pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Download className="w-4 h-4 text-[#F2D35E]" />
+            <h2 className="text-sm font-mono uppercase text-white font-medium">
+              Research Dataset Integration: CERT Insider Threat Test Dataset r4.2
+            </h2>
+          </div>
+          <span className="text-xs font-mono text-[#F2D35E] bg-[#1F1C12] border border-[#52441A] px-2 py-0.5">
+            Manual Ingestion Standard
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#292929] bg-[#141414] text-[11px] font-mono text-[#777777] uppercase">
-                <th className="py-3 px-4">Identifier / Dataset Name</th>
-                <th className="py-3 px-4">Format</th>
-                <th className="py-3 px-4 text-right">Records</th>
-                <th className="py-3 px-4 text-right">File Size</th>
-                <th className="py-3 px-4">Observation Window</th>
-                <th className="py-3 px-4">Provenance</th>
-                <th className="py-3 px-4 text-center">Validation</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#292929]">
-              {dataSources.map((ds) => (
-                <tr key={ds.id} className="hover:bg-[#171717]/80 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="font-mono text-xs text-[#D8D8D8] font-medium">{ds.id}</div>
-                    <div className="text-[11px] text-[#A0A0A0] font-light mt-0.5">{ds.name}</div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-1.5 py-0.5 font-mono text-[11px] bg-[#171717] border border-[#292929] text-[#F2D35E] font-medium">
-                      {ds.format}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-medium text-[#D8D8D8]">
-                    {ds.recordCount.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-[#777777]">
-                    {(ds.sizeBytes / 1024).toFixed(1)} KB
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-[#A0A0A0]">
-                    {ds.startDate.slice(0, 10)} to {ds.endDate.slice(0, 10)}
-                  </td>
-                  <td className="py-3 px-4 text-[11px] text-[#A0A0A0] max-w-xs truncate">
-                    {ds.provenance}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      {ds.validationStatus}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <p className="text-xs text-[#A0A0A0] leading-relaxed font-light">
+          In adherence to data safety rules, large multi-gigabyte research corpora are <strong className="text-white">not automatically downloaded</strong> during application startup. Follow these documented steps to acquire and process the Carnegie Mellon SEI CERT r4.2 benchmark:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+          <div className="p-3 bg-[#171717] border border-[#292929] space-y-2">
+            <div className="text-[#F2D35E] font-medium flex items-center gap-1.5">
+              <span>1. Acquire Dataset</span>
+            </div>
+            <p className="text-[11px] text-[#A0A0A0] font-sans">
+              Download CERT r4.2 (tar.bz2) from SEI/CMU research portal containing <code className="text-white">logon.csv</code>, <code className="text-white">device.csv</code>, <code className="text-white">file.csv</code>, <code className="text-white">email.csv</code>, and <code className="text-white">http.csv</code>.
+            </p>
+          </div>
+
+          <div className="p-3 bg-[#171717] border border-[#292929] space-y-2">
+            <div className="text-[#F2D35E] font-medium flex items-center gap-1.5">
+              <span>2. File Placement</span>
+            </div>
+            <p className="text-[11px] text-[#A0A0A0] font-sans">
+              Extract raw files directly into directory:
+              <code className="block mt-1 p-1 bg-[#0A0A0A] border border-[#292929] text-[10px] text-[#F2D35E] truncate">
+                analytics/datasets/cert_r4.2/
+              </code>
+            </p>
+          </div>
+
+          <div className="p-3 bg-[#171717] border border-[#292929] space-y-2">
+            <div className="text-[#F2D35E] font-medium flex items-center gap-1.5">
+              <span>3. PySpark Execution</span>
+            </div>
+            <p className="text-[11px] text-[#A0A0A0] font-sans">
+              Execute repeatable command-line pipeline:
+              <code className="block mt-1 p-1 bg-[#0A0A0A] border border-[#292929] text-[10px] text-[#F2D35E] truncate">
+                python -m analytics.cyberdna_pipeline.cli --input ...
+              </code>
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Ingestion & Schema Validation Sandbox */}
-      <div className="bg-[#111111] border border-[#292929] p-6 space-y-4">
-        <div className="border-b border-[#292929] pb-3">
-          <h3 className="text-sm font-normal text-[#D8D8D8]">Interactive Telemetry Schema Validator</h3>
-          <p className="text-[11px] text-[#777777]">
-            Test CSV/JSON log records against the CyberDNA schema requirements before feeding them into the baseline pipeline.
-          </p>
-        </div>
-
-        <form onSubmit={handleValidateInput} className="space-y-4">
-          <div>
-            <label className="block text-xs text-[#A0A0A0] mb-1 font-mono">
-              Input CSV Telemetry Stream:
-            </label>
-            <textarea
-              rows={5}
-              value={sampleInput}
-              onChange={(e) => setSampleInput(e.target.value)}
-              className="w-full p-3 bg-[#171717] border border-[#292929] font-mono text-xs text-[#D8D8D8] focus:outline-none focus:border-[#F2D35E]"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-[11px] text-[#777777] font-mono">
-              Mandatory fields: <code className="text-[#F2D35E]">timestamp, event_id, event_type, entity_id, entity_type, severity</code>
+      {/* Active Data Sources Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {dataSources.map((ds) => (
+          <div key={ds.id} className="p-5 bg-[#111111] border border-[#292929] space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs text-[#F2D35E]">{ds.id}</span>
+              <span className={`text-[10px] font-mono px-2 py-0.5 border ${
+                ds.validationStatus === 'VALIDATED'
+                  ? 'border-[#10B981]/40 bg-[#10B981]/10 text-[#10B981]'
+                  : 'border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[#F59E0B]'
+              }`}>
+                {ds.validationStatus}
+              </span>
             </div>
 
+            <div>
+              <h3 className="text-sm font-medium text-white">{ds.name}</h3>
+              <p className="text-xs text-[#777777] mt-1 font-mono">{ds.provenance}</p>
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t border-[#1F1F1F] font-mono text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#777777]">Format:</span>
+                <span className="text-white">{ds.format}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#777777]">Records:</span>
+                <span className="text-white">{ds.recordCount > 0 ? ds.recordCount.toLocaleString() : 'Pending placement'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#777777]">Environment:</span>
+                <span className={ds.isDemo ? 'text-[#F2D35E]' : 'text-emerald-400'}>
+                  {ds.isDemo ? 'Synthetic Demo' : 'Research Pipeline'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Interactive Schema Validation Sandbox */}
+      <div className="p-6 bg-[#111111] border border-[#292929] space-y-4">
+        <div className="border-b border-[#292929] pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileCode className="w-4 h-4 text-[#F2D35E]" />
+            <h3 className="text-sm font-mono uppercase text-white font-medium">
+              Interactive Schema Compliance & Validation Sandbox
+            </h3>
+          </div>
+          <span className="text-xs font-mono text-[#777777]">
+            Strict Type & Boundary Verification
+          </span>
+        </div>
+
+        <p className="text-xs text-[#A0A0A0] font-light leading-relaxed">
+          Test sample security records against CyberDNA's required schema (ISO-8601 UTC timestamp, entity identifier, event category, source/dest sockets, and byte transfer metrics).
+        </p>
+
+        <form onSubmit={handleValidateInput} className="space-y-4">
+          <textarea
+            value={sampleInput}
+            onChange={(e) => setSampleInput(e.target.value)}
+            rows={5}
+            className="w-full p-3 bg-[#171717] border border-[#292929] text-xs font-mono text-white focus:outline-none focus:border-[#F2D35E]"
+          />
+
+          <div className="flex items-center justify-between">
             <button
               type="submit"
               disabled={isValidating}
-              className="px-4 py-2 bg-[#F2D35E] text-[#0A0A0A] hover:bg-[#FFE58A] text-xs font-semibold font-mono flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 bg-[#F2D35E] text-[#0A0A0A] font-medium text-xs font-mono hover:bg-[#FFE58A] transition-colors"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Run Schema Audit
+              {isValidating ? 'Validating against schema...' : 'Verify Schema Compliance'}
             </button>
-          </div>
-        </form>
 
-        {validationResult && (
-          <div className={`p-4 border text-xs font-mono space-y-2 ${
-            validationResult.valid ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/30 border-rose-500/40 text-rose-300'
-          }`}>
-            <div className="flex items-center gap-2 font-medium">
-              {validationResult.valid ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Validation Passed: {validationResult.status}</span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Validation Error</span>
-                </>
-              )}
-            </div>
-
-            <p className="font-sans text-[11px] leading-relaxed">
-              {validationResult.message || validationResult.error}
-            </p>
-
-            {validationResult.valid && (
-              <div className="text-[10px] text-emerald-400/80 pt-1 border-t border-emerald-500/20 flex gap-4">
-                <span>Verified Rows: {validationResult.recordCount}</span>
-                <span>Headers: {validationResult.headersPresent?.join(', ')}</span>
-              </div>
+            {validationResult && (
+              <span className={`text-xs font-mono flex items-center gap-1.5 ${
+                validationResult.valid ? 'text-[#10B981]' : 'text-[#EF4444]'
+              }`}>
+                {validationResult.valid ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                {validationResult.valid ? validationResult.message : validationResult.error}
+              </span>
             )}
           </div>
-        )}
+        </form>
       </div>
     </div>
   );

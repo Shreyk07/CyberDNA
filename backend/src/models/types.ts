@@ -1,12 +1,27 @@
-export type EntityType = 'USER' | 'DEVICE' | 'IP' | 'SERVER' | 'DOMAIN';
+export type EntityType = 'EMPLOYEE' | 'DEVICE' | 'FILE' | 'STORAGE' | 'DOMAIN' | 'USER' | 'SERVER' | 'IP';
 export type Severity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type InvestigationStatus = 'New' | 'In Progress' | 'Needs Review' | 'Resolved';
+export type EmploymentStatus = 'ACTIVE' | 'NOTICE_PERIOD' | 'ON_LEAVE' | 'TERMINATED';
+export type FindingCategory = 
+  | 'AFTER_HOURS_BULK_EXFILTRATION'
+  | 'RESIGNATION_DATA_HOARDING'
+  | 'UNAUTHORIZED_REMOVABLE_STORAGE'
+  | 'PRIVILEGE_ABUSE_LATERAL_ACCESS'
+  | 'CREDENTIAL_COMPROMISE_SUSPICION'
+  | 'ABNORMAL_CLOUD_STORAGE_UPLOAD';
 
-export interface EntitySummary {
-  id: string;
-  label: string;
+export interface EmployeeSummary {
+  id: string; // e.g. "user:elena.rostova"
+  employeeId: string; // e.g. "EMP-1048"
+  name: string; // e.g. "Elena Rostova"
+  label: string; // display name
   type: EntityType;
-  role: string;
+  department: string; // e.g. "Finance & Accounting"
+  role: string; // e.g. "Senior Financial Controller"
+  orgUnit: string; // e.g. "Corporate Treasury / M&A"
+  employmentStatus: EmploymentStatus;
+  associatedDevices: string[];
+  privilegeLevel: 'STANDARD' | 'ELEVATED' | 'DOMAIN_ADMIN' | 'EXECUTIVE';
   eventCount: number;
   firstSeen: string;
   lastSeen: string;
@@ -15,6 +30,24 @@ export interface EntitySummary {
   profileStatus: 'PROFILED' | 'INSUFFICIENT_HISTORY' | 'PENDING_BASELINE';
   tags: string[];
   anomalous: boolean;
+  activeFindingsCount: number;
+}
+
+// Backwards-compatible alias for existing views
+export type EntitySummary = EmployeeSummary;
+
+export interface Device {
+  id: string; // e.g. "host:WS-FIN-01"
+  label: string;
+  deviceType: 'WORKSTATION' | 'LAPTOP' | 'REMOVABLE_USB' | 'SERVER' | 'GATEWAY';
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  department?: string;
+  operatingSystem: string;
+  ipAddress: string;
+  lastActive: string;
+  riskLevel: Severity;
+  isMonitored: boolean;
 }
 
 export interface FeatureDeviation {
@@ -29,7 +62,10 @@ export interface FeatureDeviation {
 }
 
 export interface BehavioralProfile {
-  entityId: string;
+  entityId: string; // employee identifier
+  employeeName?: string;
+  department?: string;
+  role?: string;
   profileStatus: 'PROFILED' | 'INSUFFICIENT_HISTORY' | 'PENDING_BASELINE';
   baselineEventCount: number;
   currentEventCount: number;
@@ -40,24 +76,58 @@ export interface BehavioralProfile {
   featureDeviations: FeatureDeviation[];
   hourlyBaseline: number[]; // 24 values
   hourlyCurrent: number[]; // 24 values
+  entropyBaseline?: number;
+  entropyCurrent?: number;
   explanation: string;
+  safeguardNote?: string;
 }
 
-export interface SecurityEvent {
+export interface ActivityEvent {
   event_id: string;
   timestamp: string;
-  event_type: string;
-  entity_id: string;
+  event_type: string; // LOGON, LOGOFF, FILE_ACCESS, FILE_COPY, REMOVABLE_CONNECT, etc.
+  employee_id: string;
+  employee_name: string;
+  department: string;
+  entity_id: string; // alias for employee_id
   entity_type: EntityType;
   severity: Severity;
+  device_id: string;
+  target_resource: string;
   source_ip: string;
   destination_ip: string;
   destination_port: number;
   protocol: string;
   bytes_transferred: number;
+  is_off_hours: boolean;
   process_name: string;
   rule_triggered: string;
   is_synthetic: number;
+}
+
+// Backwards-compatible alias for existing views
+export type SecurityEvent = ActivityEvent;
+
+export interface ThreatFinding {
+  id: string;
+  category: FindingCategory;
+  categoryLabel: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  timestamp: string;
+  observationWindow: string;
+  anomalyScore: number; // 0-100
+  evidenceCompleteness: 'HIGH' | 'MEDIUM' | 'PARTIAL';
+  explanation: string;
+  baselineComparison: string;
+  supportingEventIds: string[];
+  reviewStatus: 'NEW' | 'UNDER_REVIEW' | 'ESCALATED' | 'BENIGN' | 'RESOLVED';
+  mitreTactic: string;
+  whatHappened?: string;
+  whyFlagged?: string;
+  employeeInvolved?: string;
+  nextSteps?: string;
 }
 
 export interface InvestigationNote {
@@ -76,6 +146,9 @@ export interface Investigation {
   createdAt: string;
   updatedAt: string;
   leadAnalyst: string;
+  subjectEmployee?: string;
+  subjectEmployeeName?: string;
+  department?: string;
   summary: string;
   involvedEntities: string[];
   correlatedChains: string[];
@@ -83,17 +156,21 @@ export interface Investigation {
   notes: InvestigationNote[];
   observedFacts: string[];
   hypotheses: string[];
-  confidence: number; // 0.0 - 1.0
+  recommendations?: string[];
+  confidence: number;
   limitations: string;
 }
 
 export interface GraphNode {
   id: string;
   label: string;
-  type: string;
+  type: string; // EMPLOYEE, DEVICE, FILE, SERVER, DOMAIN
+  department?: string;
   event_count: number;
   risk_level: Severity;
   metadata?: Record<string, any>;
+  x?: number;
+  y?: number;
 }
 
 export interface GraphEdge {
@@ -121,4 +198,25 @@ export interface DataSourceMeta {
   provenance: string;
   lastIngested: string;
   isDemo: boolean;
+}
+
+export interface PipelineRunMeta {
+  pipeline_version: string;
+  dataset_type: 'CERT_INSIDER_THREAT' | 'SYNTHETIC_DEMO' | 'ENTERPRISE_APEX';
+  dataset_path: string;
+  engine: 'PySpark (Local Multi-Threaded Spark Engine)' | 'PyArrow / Pandas Analytical Core';
+  spark_version?: string;
+  total_events_processed: number;
+  valid_events_count: number;
+  rejected_events_count: number;
+  total_employees_profiled: number;
+  anomalous_employees_count: number;
+  findings_generated_count: number;
+  processing_duration_seconds: number;
+  output_parquet_path: string;
+  data_quality: {
+    null_counts: Record<string, number>;
+    duplicates_removed: number;
+    schema_compliance: boolean;
+  };
 }

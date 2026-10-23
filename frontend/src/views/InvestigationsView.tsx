@@ -143,10 +143,12 @@ export const InvestigationsView: React.FC<InvestigationsViewProps> = ({
       {/* Editorial Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">Digital Forensics Workspace</div>
-          <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight text-white mt-1">Investigations & Case Dossiers</h1>
+          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">Security Review Cases</div>
+          <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight text-white mt-1">
+            Security <span className="italic text-[#F2D35E]">Investigations</span>
+          </h1>
           <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl leading-relaxed">
-            Evidence-grounded digital forensics dossiers. Verifiable telemetry observations are rigorously separated from investigative hypotheses. Exportable reports provide academic and audit-compliant provenance.
+            Review security alerts and related employee activity records. Check the evidence, add reviewer notes, and update the case status.
           </p>
         </div>
 

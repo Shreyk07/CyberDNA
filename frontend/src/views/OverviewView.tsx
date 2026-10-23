@@ -7,9 +7,16 @@ import {
   ArrowUpRight,
   AlertTriangle,
   Server,
-  CheckCircle2
+  CheckCircle2,
+  Users,
+  HardDrive,
+  FileText,
+  Clock,
+  Sparkles,
+  Info,
+  ChevronRight
 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 interface OverviewViewProps {
   stats: any;
@@ -26,105 +33,151 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   if (!stats) {
     return (
-      <div className="p-8 flex items-center justify-center text-[#A0A0A0] text-sm">
+      <div className="p-8 flex items-center justify-center text-[#A0A0A0] text-sm font-mono">
         <Activity className="w-4 h-4 animate-spin mr-2 text-[#F2D35E]" />
-        Loading telemetry baselines...
+        Loading organizational telemetry baselines...
       </div>
     );
   }
 
   const {
-    totalEventsProcessed = 2231,
-    totalEntitiesProfiled = 15,
-    anomaliesFlagged = 3,
-    openInvestigationsCount = 5,
-    correlatedChainsCount = 6,
+    organizationName = 'Apex Global Technologies (Fictional)',
+    isSyntheticDemo = true,
+    demoNotice = 'DEMO ENVIRONMENT: Operating on synthetic behavioral telemetry conforming to CERT Insider Threat Test Dataset schemas. Ground-truth research datasets remain isolated.',
+    totalEmployees = 12,
+    totalEventsProcessed = 2173,
+    totalProfilesGenerated = 12,
+    anomaliesIdentified = 3,
+    pendingFindingsReviewCount = 3,
+    openInvestigationsCount = 3,
+    activityByCategory = {
+      logonLogoff: 780,
+      fileActivity: 690,
+      removableDevice: 8,
+      webCloud: 510,
+      emailActivity: 185
+    },
+    departmentSummaries = [],
     volumeTrends = [],
-    severityDistribution = {},
-    topDeviatingEntities = [],
-    recentInvestigations = []
+    topDeviatingEmployees = [],
+    recentInvestigations = [],
+    pipelineMetadata = {}
   } = stats;
 
   const statCards = [
     {
-      label: 'Events Processed',
+      label: 'Total Employees',
+      value: totalEmployees.toString(),
+      subtext: 'Across 6 departments',
+      icon: Users,
+      color: 'text-white'
+    },
+    {
+      label: 'Total Activity Events',
       value: totalEventsProcessed.toLocaleString(),
-      subtext: 'Normalized telemetry partition',
+      subtext: 'Cleaned and processed',
       icon: Activity,
       color: 'text-white'
     },
     {
-      label: 'Entities Profiled',
-      value: totalEntitiesProfiled.toString(),
-      subtext: 'Users, hosts, servers, IPs',
-      icon: Fingerprint,
-      color: 'text-white'
-    },
-    {
-      label: 'Behavioral Deviations',
-      value: anomaliesFlagged.toString(),
-      subtext: 'BDI score ≥ 50 / 100',
+      label: 'Unusual Activities Detected',
+      value: anomaliesIdentified.toString(),
+      subtext: 'Flagged by security rules',
       icon: AlertTriangle,
       color: 'text-[#F2D35E]',
       highlight: true
     },
     {
-      label: 'Correlated Chains',
-      value: correlatedChainsCount.toString(),
-      subtext: 'MITRE ATT&CK reconstructions',
-      icon: Layers,
+      label: 'Alerts Requiring Review',
+      value: pendingFindingsReviewCount.toString(),
+      subtext: 'Needs analyst review',
+      icon: Clock,
+      color: 'text-[#F2D35E]'
+    },
+    {
+      label: 'Employee Profiles',
+      value: totalProfilesGenerated.toString(),
+      subtext: 'Activity summaries',
+      icon: Fingerprint,
       color: 'text-white'
     },
     {
-      label: 'Open Investigations',
+      label: 'Active Cases',
       value: openInvestigationsCount.toString(),
-      subtext: 'Active forensic cases',
+      subtext: 'Investigations in progress',
       icon: ShieldAlert,
       color: 'text-white'
     }
   ];
 
+  const categoryBarData = [
+    { name: 'Logon / Logoff', count: activityByCategory.logonLogoff || 0 },
+    { name: 'File Access / Copy', count: activityByCategory.fileActivity || 0 },
+    { name: 'Web & Cloud', count: activityByCategory.webCloud || 0 },
+    { name: 'Removable USB', count: activityByCategory.removableDevice || 0 },
+    { name: 'Email Activity', count: activityByCategory.emailActivity || 0 }
+  ];
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-[#0A0A0A] text-[#D8D8D8]">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-[#0A0A0A] text-[#D8D8D8] animate-fade-in">
+      {/* Synthetic Demo Banner Notice */}
+      {isSyntheticDemo && (
+        <div className="bg-[#141414] border border-[#292929] border-l-2 border-l-[#F2D35E] p-3 text-xs text-[#A0A0A0] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-[#F2D35E] shrink-0" />
+            <span>
+              <strong className="text-white uppercase font-mono tracking-wider mr-1.5">[Synthetic Demo Dataset]</strong>
+              {demoNotice}
+            </span>
+          </div>
+          <span className="shrink-0 text-[10px] font-mono text-[#777777] border border-[#292929] px-2 py-0.5">
+            Apex Global Technologies
+          </span>
+        </div>
+      )}
+
       {/* Editorial Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">Institutional Forensics Intelligence</div>
-          <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight text-white mt-1">Platform Overview</h1>
-          <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl leading-relaxed">
-            Continuous behavioral baseline construction across 2,231 verified security events. Dual-layer Isolation Forest and robust statistical deviation modeling identify anomalous state changes without relying on static heuristics.
+          <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">
+            Employee Activity Monitoring
+          </div>
+          <h1 className="text-3xl md:text-5xl font-serif font-normal tracking-tight text-white mt-1">
+            Activity & Security <span className="italic text-[#F2D35E]">Overview</span>
+          </h1>
+          <p className="text-xs text-[#A0A0A0] mt-1.5 font-light max-w-2xl leading-relaxed">
+            Monitoring employee activity records across the company. The platform summarizes daily activity and flags unusual actions—such as unexpected login hours, heavy file access, or USB usage—for human review.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono bg-[#111111] border border-[#292929] text-[#10B981]">
-            <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
-            Parquet Sync Verified
-          </span>
-          <span className="px-2.5 py-1 text-[11px] font-mono bg-[#171717] border border-[#292929] text-[#F2D35E] font-medium">
-            RESEARCH CORPUS
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono bg-[#111111] border border-[#292929] text-[#10B981]">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+            Pipeline Engine: PySpark & PyArrow
           </span>
         </div>
       </div>
 
-      {/* Metric Counters Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {statCards.map((card, i) => {
+      {/* 6 Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
             <div
-              key={i}
-              className={`p-5 bg-[#111111] border ${card.highlight ? 'border-[#F2D35E]/50 shadow-[0_0_16px_rgba(242,211,94,0.06)]' : 'border-[#292929]'} flex flex-col justify-between`}
+              key={idx}
+              className={`p-4 bg-[#111111] border transition-all ${
+                card.highlight
+                  ? 'border-[#52441A] bg-[#14120A] shadow-[0_0_15px_rgba(242,211,94,0.06)]'
+                  : 'border-[#292929] hover:border-[#3E3E3E]'
+              }`}
             >
-              <div>
-                <div className="flex items-center justify-between text-[#777777] mb-3">
-                  <span className="text-[11px] uppercase tracking-wider font-mono">{card.label}</span>
-                  <Icon className={`w-4 h-4 ${card.highlight ? 'text-[#F2D35E]' : 'text-[#777777]'}`} strokeWidth={1.5} />
-                </div>
-                <div className={`text-3xl font-light tracking-tight ${card.color}`}>
-                  {card.value}
-                </div>
+              <div className="flex items-center justify-between text-xs text-[#777777] mb-2 font-mono">
+                <span className="truncate">{card.label}</span>
+                <Icon className={`w-3.5 h-3.5 ${card.color}`} />
               </div>
-              <div className="text-[11px] text-[#777777] font-light mt-3 border-t border-[#292929] pt-2">
+              <div className={`text-2xl font-mono font-medium ${card.color}`}>
+                {card.value}
+              </div>
+              <div className="text-[10px] text-[#A0A0A0] mt-1 truncate">
                 {card.subtext}
               </div>
             </div>
@@ -132,227 +185,255 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         })}
       </div>
 
-      {/* Main Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Daily Volume Bar Chart */}
-        <div className="lg:col-span-2 p-6 bg-[#111111] border border-[#292929]">
-          <div className="flex items-center justify-between mb-4 border-b border-[#292929] pb-3">
+      {/* Charts Grid: Activity Volume Over Time & Activity Breakdown by Category */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Activity Volume Over Time */}
+        <div className="lg:col-span-7 bg-[#111111] border border-[#292929] p-5 space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-white">Security Telemetry Ingestion Velocity</h3>
-              <p className="text-[11px] text-[#777777]">Daily distribution of events across 14-day observation window</p>
+              <h2 className="text-sm font-medium text-white uppercase tracking-wider font-mono">
+                Activity Volume Over Time
+              </h2>
+              <p className="text-[11px] text-[#777777] font-light">
+                Daily activity events across all monitored workstations and servers
+              </p>
             </div>
-            <span className="text-[11px] font-mono text-[#F2D35E]">UTC Window</span>
+            <span className="text-[10px] font-mono text-[#F2D35E] border border-[#52441A] bg-[#1A180D] px-2 py-0.5">
+              18-Day Observation Window
+            </span>
           </div>
 
-          <div className="h-56 w-full">
+          <div className="h-60 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={volumeTrends}>
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: '#777777' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#292929' }}
+                  stroke="#555555"
+                  tick={{ fill: '#777777', fontSize: 10, fontFamily: 'monospace' }}
                   tickFormatter={(val) => val.slice(5)}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#777777' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#292929' }}
+                  stroke="#555555"
+                  tick={{ fill: '#777777', fontSize: 10, fontFamily: 'monospace' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#171717',
-                    border: '1px solid #292929',
-                    borderRadius: '0px',
-                    fontSize: '11px',
-                    fontFamily: 'IBM Plex Mono',
-                    color: '#D8D8D8'
+                    backgroundColor: '#111111',
+                    borderColor: '#292929',
+                    color: '#D8D8D8',
+                    fontSize: 11,
+                    fontFamily: 'monospace'
                   }}
-                  cursor={{ fill: '#1F1F1F' }}
+                  formatter={(val: any) => [`${val} events`, 'Volume']}
+                  labelFormatter={(lbl) => `Date: ${lbl}`}
                 />
-                <Bar dataKey="count" fill="#F2D35E" barSize={16} />
+                <Bar dataKey="count" fill="#F2D35E" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Severity Distribution */}
-        <div className="p-6 bg-[#111111] border border-[#292929] flex flex-col justify-between">
-          <div>
-            <div className="border-b border-[#292929] pb-3 mb-4">
-              <h3 className="text-sm font-medium text-white">Telemetry Risk Severity</h3>
-              <p className="text-[11px] text-[#777777]">Classified according to CVSS & MITRE risk impact</p>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { label: 'Critical Severity', key: 'CRITICAL', color: 'bg-[#EF4444]', text: 'text-[#EF4444]' },
-                { label: 'High Severity', key: 'HIGH', color: 'bg-[#F87171]', text: 'text-[#F87171]' },
-                { label: 'Medium Severity', key: 'MEDIUM', color: 'bg-[#F59E0B]', text: 'text-[#F59E0B]' },
-                { label: 'Low Severity', key: 'LOW', color: 'bg-[#60A5FA]', text: 'text-[#60A5FA]' },
-                { label: 'Informational', key: 'INFO', color: 'bg-[#777777]', text: 'text-[#777777]' },
-              ].map((sev) => {
-                const count = severityDistribution[sev.key] || 0;
-                const pct = Math.round((count / Math.max(totalEventsProcessed, 1)) * 100);
-                return (
-                  <div key={sev.key} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-light text-[#A0A0A0]">{sev.label}</span>
-                      <span className="font-mono text-xs text-white">{count.toLocaleString()} ({pct}%)</span>
-                    </div>
-                    <div className="w-full bg-[#171717] h-1.5 overflow-hidden border border-[#292929]">
-                      <div className={`h-full ${sev.color}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Activity Breakdown by Category */}
+        <div className="lg:col-span-5 bg-[#111111] border border-[#292929] p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-white uppercase tracking-wider font-mono">
+                Activity Breakdown by Type
+              </h2>
+              <p className="text-[11px] text-[#777777] font-light">
+                Distribution of recorded events across activity types
+              </p>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-[#292929] text-[11px] text-[#777777] flex items-center justify-between">
-            <span className="font-mono">Threshold: Z &gt; 2.5&sigma;</span>
-            <button
-              onClick={() => onNavigateToView('analytics')}
-              className="text-[#F2D35E] hover:underline flex items-center gap-0.5 font-mono text-xs"
-            >
-              Detailed Analytics <ArrowUpRight className="w-3 h-3" />
-            </button>
+          <div className="space-y-3 pt-2">
+            {categoryBarData.map((cat, idx) => {
+              const maxVal = Math.max(...categoryBarData.map(c => c.count), 1);
+              const pct = Math.round((cat.count / maxVal) * 100);
+              const isRemovable = cat.name.includes('Removable');
+
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-[#A0A0A0]">{cat.name}</span>
+                    <span className={isRemovable && cat.count > 0 ? 'text-[#F2D35E] font-semibold' : 'text-white'}>
+                      {cat.count.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-[#1A1A1A] border border-[#292929]">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        isRemovable && cat.count > 0 ? 'bg-[#F2D35E]' : 'bg-[#555555]'
+                      }`}
+                      style={{ width: `${Math.max(pct, 2)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-2 border-t border-[#1F1F1F] text-[11px] text-[#777777]">
+            <span className="text-[#F2D35E] font-medium">* Note: </span>
+            Removable USB connections are strictly restricted by corporate policy, rendering any non-zero count a high-priority deviation vector.
           </div>
         </div>
       </div>
 
-      {/* Bottom Grid: Top Deviations & Recent Investigations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Deviating Entities */}
-        <div className="p-6 bg-[#111111] border border-[#292929]">
-          <div className="flex items-center justify-between border-b border-[#292929] pb-3 mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-white">Entities with Greatest Behavioral Deviation</h3>
-              <p className="text-[11px] text-[#777777]">Ranked by Composite Behavioral Deviation Index (BDI)</p>
-            </div>
+      {/* Department Summaries Table & Top Deviating Employees */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Department Summaries */}
+        <div className="lg:col-span-7 bg-[#111111] border border-[#292929] p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-white uppercase tracking-wider font-mono">
+              Department Activity Summaries
+            </h2>
             <button
               onClick={() => onNavigateToView('entities')}
-              className="text-xs font-mono text-[#F2D35E] hover:underline flex items-center gap-1"
+              className="text-xs text-[#F2D35E] hover:underline flex items-center gap-1 font-mono"
             >
-              View All <ArrowUpRight className="w-3 h-3" />
+              View all employees <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="divide-y divide-[#292929]">
-            {topDeviatingEntities.map((ent: any) => {
-              const isHigh = ent.deviationIndex >= 50;
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-[#141414] border-b border-[#292929] text-[10px] text-[#777777] uppercase">
+                <tr>
+                  <th className="p-2.5">Department</th>
+                  <th className="p-2.5">Employees</th>
+                  <th className="p-2.5">Total Activity</th>
+                  <th className="p-2.5 text-right">Anomalies</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1F1F1F]">
+                {departmentSummaries.length > 0 ? (
+                  departmentSummaries.map((dept: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-[#161616] text-[#A0A0A0]">
+                      <td className="p-2.5 text-white font-medium">{dept.department}</td>
+                      <td className="p-2.5">{dept.employeesCount} staff</td>
+                      <td className="p-2.5">{dept.eventsCount.toLocaleString()} events</td>
+                      <td className="p-2.5 text-right">
+                        {dept.anomalousCount > 0 ? (
+                          <span className="px-2 py-0.5 bg-[#3D1414] text-[#FF7A7A] border border-[#5E1E1E] text-[10px]">
+                            {dept.anomalousCount} FLAGGED
+                          </span>
+                        ) : (
+                          <span className="text-[#10B981] text-[10px]">NORMAL</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-4 text-center text-[#777777]">
+                      Computing department baselines...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Top Deviating Employees */}
+        <div className="lg:col-span-5 bg-[#111111] border border-[#292929] p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-white uppercase tracking-wider font-mono">
+              Employees with Unusual Activity
+            </h2>
+            <button
+              onClick={() => onNavigateToView('findings')}
+              className="text-xs text-[#F2D35E] hover:underline flex items-center gap-1 font-mono"
+            >
+              Security alerts <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {topDeviatingEmployees.map((emp: any) => {
+              const isHigh = emp.deviationIndex >= 70;
               return (
                 <div
-                  key={ent.id}
-                  onClick={() => onNavigateToEntity(ent.id)}
-                  className="py-3 flex items-center justify-between hover:bg-[#171717] px-2 -mx-2 cursor-pointer transition-colors"
+                  key={emp.id}
+                  onClick={() => onNavigateToEntity(emp.id)}
+                  className="p-3 bg-[#141414] border border-[#292929] hover:border-[#F2D35E] cursor-pointer transition-colors flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-[#171717] border border-[#292929] flex items-center justify-center text-xs font-mono text-[#F2D35E]">
-                      {ent.type[0]}
+                  <div>
+                    <div className="text-xs font-medium text-white flex items-center gap-2">
+                      <span>{emp.name || emp.label}</span>
+                      {emp.employmentStatus === 'NOTICE_PERIOD' && (
+                        <span className="px-1.5 py-0.2 bg-[#3D2C12] text-[#F2D35E] text-[9px] border border-[#52441A]">
+                          NOTICE PERIOD
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <div className="font-mono text-xs text-white font-medium">{ent.id}</div>
-                      <div className="text-[11px] text-[#777777] font-light">{ent.role}</div>
+                    <div className="text-[11px] text-[#777777] font-mono mt-0.5">
+                      {emp.department} • {emp.role}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className={`font-mono text-xs font-medium ${isHigh ? 'text-[#F2D35E]' : 'text-white'}`}>
-                        BDI {ent.deviationIndex}
-                      </div>
-                      <div className="text-[10px] text-[#777777] font-light font-mono">
-                        Risk: {ent.riskScore}/100
-                      </div>
+                  <div className="text-right">
+                    <div className={`text-xs font-mono font-bold ${isHigh ? 'text-[#FF7A7A]' : 'text-[#F2D35E]'}`}>
+                      Deviation {emp.deviationIndex}%
                     </div>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-[#777777]" />
+                    <div className="text-[10px] text-[#777777] font-mono">
+                      {emp.anomalous ? 'FLAGGED FOR REVIEW' : 'TYPICAL'}
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-
-        {/* Active Investigations */}
-        <div className="p-6 bg-[#111111] border border-[#292929]">
-          <div className="flex items-center justify-between border-b border-[#292929] pb-3 mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-white">Recent Correlated Investigations</h3>
-              <p className="text-[11px] text-[#777777]">Evidence-backed digital forensics cases</p>
-            </div>
-            <button
-              onClick={() => onNavigateToView('investigations')}
-              className="text-xs font-mono text-[#F2D35E] hover:underline flex items-center gap-1"
-            >
-              Workspace <ArrowUpRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="divide-y divide-[#292929]">
-            {recentInvestigations.map((inv: any) => (
-              <div
-                key={inv.id}
-                onClick={() => onNavigateToInvestigation(inv.id)}
-                className="py-3 flex items-center justify-between hover:bg-[#171717] px-2 -mx-2 cursor-pointer transition-colors"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] text-[#F2D35E]">{inv.id}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 border ${
-                      inv.severity === 'CRITICAL' ? 'border-rose-900 text-[#EF4444] bg-rose-950/40' :
-                      inv.severity === 'HIGH' ? 'border-rose-900/60 text-[#F87171] bg-rose-950/20' :
-                      'border-[#292929] text-[#A0A0A0] bg-[#171717]'
-                    }`}>
-                      {inv.severity}
-                    </span>
-                  </div>
-                  <div className="text-xs text-white font-medium mt-1">{inv.title}</div>
-                  <div className="text-[11px] text-[#777777] font-light truncate max-w-sm">
-                    {inv.summary}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className={`text-[10px] px-2 py-0.5 border font-mono ${
-                    inv.status === 'In Progress' ? 'border-[#F2D35E] bg-[#F2D35E] text-[#0A0A0A] font-medium' :
-                    inv.status === 'Resolved' ? 'border-emerald-800 text-[#10B981] bg-emerald-950/30' :
-                    'border-[#292929] text-[#A0A0A0] bg-[#171717]'
-                  }`}>
-                    {inv.status}
-                  </span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[#777777]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Ingestion & Provenance Status Banner */}
-      <div className="p-5 border border-[#292929] bg-[#111111] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Server className="w-5 h-5 text-[#F2D35E] shrink-0" />
+      {/* Active Forensic Investigations Workspace Teaser */}
+      <div className="bg-[#111111] border border-[#292929] p-5 space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-medium text-white">Data Pipeline & Baseline Calculation Status</div>
-            <div className="text-[11px] text-[#777777] font-mono">
-              Input: <code className="text-[#F2D35E]">sample_security_events.csv</code> (2,231 events) • Parquet Store Active • No Data Leakage Split (70/30)
-            </div>
+            <h2 className="text-sm font-medium text-white uppercase tracking-wider font-mono">
+              Active Security Investigations
+            </h2>
+            <p className="text-[11px] text-[#777777] font-light">
+              Unusual activity cases under active review
+            </p>
           </div>
+          <button
+            onClick={() => onNavigateToView('investigations')}
+            className="px-3 py-1 bg-[#171717] border border-[#292929] text-xs text-[#D8D8D8] hover:text-[#F2D35E] hover:border-[#F2D35E] transition-colors font-mono flex items-center gap-1.5"
+          >
+            Open Case Workspace <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <div className="flex items-center gap-2 font-mono text-xs">
-          <button
-            onClick={() => onNavigateToView('methodology')}
-            className="px-3 py-1.5 bg-[#171717] border border-[#292929] text-[#D8D8D8] hover:bg-[#222222] transition-colors"
-          >
-            Methodology
-          </button>
-          <button
-            onClick={() => onNavigateToView('datasources')}
-            className="px-3 py-1.5 bg-[#F2D35E] text-[#0A0A0A] hover:bg-[#FFE58A] transition-colors font-medium"
-          >
-            Data Sources
-          </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {recentInvestigations.slice(0, 3).map((inv: any) => (
+            <div
+              key={inv.id}
+              onClick={() => onNavigateToInvestigation(inv.id)}
+              className="p-4 bg-[#141414] border border-[#292929] hover:border-[#3E3E3E] cursor-pointer transition-all space-y-3"
+            >
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-[#F2D35E]">{inv.id}</span>
+                <span className="px-1.5 py-0.5 bg-[#1F1F1F] text-white border border-[#292929]">
+                  {inv.status}
+                </span>
+              </div>
+              <h3 className="text-xs font-medium text-white line-clamp-2">
+                {inv.title}
+              </h3>
+              <p className="text-[11px] text-[#A0A0A0] line-clamp-2 font-light">
+                {inv.summary}
+              </p>
+              <div className="pt-2 border-t border-[#1F1F1F] flex items-center justify-between text-[10px] text-[#777777] font-mono">
+                <span>Confidence: {Math.round((inv.confidence || 0.85) * 100)}%</span>
+                <span className="text-[#F2D35E] flex items-center gap-1">
+                  Examine case <ArrowUpRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

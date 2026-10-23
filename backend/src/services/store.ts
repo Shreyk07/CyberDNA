@@ -1,8 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import {
+  EmployeeSummary,
   EntitySummary,
+  Device,
+  ThreatFinding,
   BehavioralProfile,
+  ActivityEvent,
   SecurityEvent,
   Investigation,
   InvestigationNote,
@@ -11,28 +15,166 @@ import {
   DataSourceMeta
 } from '../models/types.js';
 
+const EMPLOYEE_METADATA: Record<string, {
+  employeeId: string;
+  name: string;
+  department: string;
+  role: string;
+  orgUnit: string;
+  status: 'ACTIVE' | 'NOTICE_PERIOD' | 'ON_LEAVE' | 'TERMINATED';
+  devices: string[];
+  privilegeLevel: 'STANDARD' | 'ELEVATED' | 'DOMAIN_ADMIN' | 'EXECUTIVE';
+}> = {
+  'user:elena.rostova': {
+    employeeId: 'EMP-1048',
+    name: 'Elena Rostova',
+    department: 'Finance',
+    role: 'Senior Financial Controller',
+    orgUnit: 'Corporate Treasury / M&A',
+    status: 'NOTICE_PERIOD',
+    devices: ['host:WS-FIN-01'],
+    privilegeLevel: 'ELEVATED'
+  },
+  'user:alex.vance': {
+    employeeId: 'EMP-1049',
+    name: 'Alex Vance',
+    department: 'Finance',
+    role: 'Budget Analyst',
+    orgUnit: 'FP&A Operations',
+    status: 'ACTIVE',
+    devices: ['host:WS-FIN-02'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:sarah.connor': {
+    employeeId: 'EMP-1050',
+    name: 'Sarah Connor',
+    department: 'Engineering',
+    role: 'Lead DevOps Architect',
+    orgUnit: 'Core Cloud Infrastructure',
+    status: 'ACTIVE',
+    devices: ['host:WS-ENG-42'],
+    privilegeLevel: 'ELEVATED'
+  },
+  'user:david.clark': {
+    employeeId: 'EMP-1051',
+    name: 'David Clark',
+    department: 'Engineering',
+    role: 'Senior Cloud Infrastructure Engineer',
+    orgUnit: 'Site Reliability Engineering',
+    status: 'ACTIVE',
+    devices: ['host:WS-ENG-19'],
+    privilegeLevel: 'ELEVATED'
+  },
+  'user:marcus.wright': {
+    employeeId: 'EMP-1052',
+    name: 'Marcus Wright',
+    department: 'IT Operations',
+    role: 'Systems & Helpdesk Administrator',
+    orgUnit: 'Enterprise IT Services',
+    status: 'ACTIVE',
+    devices: ['host:WS-IT-08'],
+    privilegeLevel: 'DOMAIN_ADMIN'
+  },
+  'user:rachel.kim': {
+    employeeId: 'EMP-1053',
+    name: 'Rachel Kim',
+    department: 'Human Resources',
+    role: 'HR Director & People Operations',
+    orgUnit: 'Global Talent & Compliance',
+    status: 'ACTIVE',
+    devices: ['host:WS-HR-05'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:jonathan.hayes': {
+    employeeId: 'EMP-1054',
+    name: 'Jonathan Hayes',
+    department: 'Legal & Compliance',
+    role: 'Corporate Legal Counsel',
+    orgUnit: 'Intellectual Property / Governance',
+    status: 'ACTIVE',
+    devices: ['host:WS-LEG-01'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:lisa.tanaka': {
+    employeeId: 'EMP-1055',
+    name: 'Lisa Tanaka',
+    department: 'Sales & Accounts',
+    role: 'Enterprise Account Executive',
+    orgUnit: 'North America Enterprise Sales',
+    status: 'ACTIVE',
+    devices: ['host:WS-SALES-11'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:carlos.mendez': {
+    employeeId: 'EMP-1056',
+    name: 'Carlos Mendez',
+    department: 'Sales & Accounts',
+    role: 'Client Solutions Manager',
+    orgUnit: 'Strategic Client Engagements',
+    status: 'ACTIVE',
+    devices: ['host:WS-SALES-14'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:maya.patel': {
+    employeeId: 'EMP-1057',
+    name: 'Maya Patel',
+    department: 'Engineering',
+    role: 'Backend Software Engineer',
+    orgUnit: 'Core Platform Engineering',
+    status: 'ACTIVE',
+    devices: ['host:WS-ENG-07'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:kevin.zhang': {
+    employeeId: 'EMP-1058',
+    name: 'Kevin Zhang',
+    department: 'Finance',
+    role: 'Treasury Specialist',
+    orgUnit: 'Global Liquidity & Audit',
+    status: 'ACTIVE',
+    devices: ['host:WS-FIN-03'],
+    privilegeLevel: 'STANDARD'
+  },
+  'user:service.backup': {
+    employeeId: 'EMP-SVC-01',
+    name: 'Automated Backup Daemon',
+    department: 'IT Operations',
+    role: 'Scheduled Service Account',
+    orgUnit: 'Automated Infrastructure',
+    status: 'ACTIVE',
+    devices: ['srv:BACKUP01'],
+    privilegeLevel: 'DOMAIN_ADMIN'
+  }
+};
+
 class DataStore {
-  private entities: EntitySummary[] = [];
+  private employees: EmployeeSummary[] = [];
+  private devices: Device[] = [];
+  private findings: ThreatFinding[] = [];
   private profiles: Map<string, BehavioralProfile> = new Map();
-  private events: SecurityEvent[] = [];
+  private events: ActivityEvent[] = [];
   private investigations: Investigation[] = [];
   private graphNodes: GraphNode[] = [];
   private graphEdges: GraphEdge[] = [];
   private dataSources: DataSourceMeta[] = [];
   private isLoaded: boolean = false;
+  private pipelineMetadata: any = null;
 
   constructor() {
     this.initialize();
   }
 
   public initialize() {
-    this.entities = [];
+    this.employees = [];
+    this.devices = [];
+    this.findings = [];
     this.profiles.clear();
     this.events = [];
     this.investigations = [];
     this.graphNodes = [];
     this.graphEdges = [];
     this.dataSources = [];
+
     try {
       const candidates = [
         path.resolve(process.cwd(), 'analytics/output/pipeline_results.json'),
@@ -49,16 +191,63 @@ class DataStore {
       if (fs.existsSync(pipelineResultsPath)) {
         const rawJson = fs.readFileSync(pipelineResultsPath, 'utf-8');
         const data = JSON.parse(rawJson);
+        this.pipelineMetadata = {
+          version: data.pipeline_version,
+          datasetType: data.dataset_type,
+          engine: data.engine_info?.engine,
+          isSparkDistributed: data.engine_info?.is_spark_distributed,
+          processingDurationSeconds: data.processing_duration_seconds,
+          executionTimestamp: data.execution_timestamp,
+          dataQualityReport: data.data_quality_report
+        };
 
-        // Load profiles
+        // 1. Load Threat Findings
+        if (data.findings && Array.isArray(data.findings)) {
+          this.findings = data.findings.map((f: any) => ({
+            id: f.id,
+            category: f.category,
+            categoryLabel: f.category_label || f.category,
+            employeeId: f.employee_id,
+            employeeName: f.employee_name || f.employee_id,
+            department: f.department || 'Unknown',
+            timestamp: f.timestamp,
+            observationWindow: f.observation_window || 'Evaluation Window',
+            anomalyScore: f.anomaly_score || 0,
+            evidenceCompleteness: f.evidence_completeness || 'HIGH',
+            explanation: f.explanation || 'Significant behavioral deviation detected.',
+            baselineComparison: f.baseline_comparison || 'Deviation from historical baseline',
+            supportingEventIds: f.supporting_event_ids || [],
+            reviewStatus: f.review_status || 'NEW',
+            mitreTactic: f.mitre_tactic || 'Insider Threat Deviation',
+            whatHappened: f.what_happened || f.explanation || 'Unusual employee activity was recorded.',
+            whyFlagged: f.why_flagged || f.baseline_comparison || 'Activity differed from expected normal patterns.',
+            employeeInvolved: f.employee_involved || `${f.employee_name || f.employee_id} (${f.department || 'Unknown'})`,
+            nextSteps: f.next_steps || 'Review recent activity records and check with manager to confirm if authorized.'
+          }));
+        }
+
+        // 2. Load Profiles
         if (data.profiles && Array.isArray(data.profiles)) {
           for (const p of data.profiles) {
             const entId = p.entity_id;
             const bdi = p.behavioral_deviation_index || 0;
             const isAnom = p.is_anomalous || bdi >= 50;
+            const meta = EMPLOYEE_METADATA[entId] || {
+              employeeId: `EMP-${entId.replace(/[^0-9]/g, '').slice(0, 4) || '9000'}`,
+              name: entId.replace('user:', '').replace('.', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              department: 'General Operations',
+              role: 'Staff Member',
+              orgUnit: 'Apex Enterprise',
+              status: 'ACTIVE',
+              devices: ['host:WS-GEN-01'],
+              privilegeLevel: 'STANDARD'
+            };
 
             const profile: BehavioralProfile = {
               entityId: entId,
+              employeeName: meta.name,
+              department: meta.department,
+              role: meta.role,
               profileStatus: p.profile_status || 'PROFILED',
               baselineEventCount: p.baseline_event_count || 0,
               currentEventCount: p.current_event_count || 0,
@@ -69,50 +258,207 @@ class DataStore {
               featureDeviations: p.feature_deviations || [],
               hourlyBaseline: this.generateHourlyDistribution(bdi, false),
               hourlyCurrent: this.generateHourlyDistribution(bdi, true),
+              entropyBaseline: p.baseline_entropy || 2.45,
+              entropyCurrent: p.current_entropy || 3.12,
               explanation: isAnom
-                ? `Entity exhibited statistically significant deviation (BDI: ${bdi}/100) across ${p.top_deviating_features?.join(', ') || 'multiple vectors'}.`
-                : `Observed activity remains within 2 standard deviations of historical baseline.`
+                ? `Employee exhibited statistically significant behavioral deviation (Deviation Index: ${bdi}/100) across ${p.top_deviating_features?.join(', ') || 'off-hours and transfer metrics'}.`
+                : `Observed activity remains within normal operating parameters (within 2.0 standard deviations of baseline).`,
+              safeguardNote: p.profile_status === 'INSUFFICIENT_HISTORY'
+                ? 'Profile suppressed: Fewer than 10 historical observation records available.'
+                : undefined
             };
 
             this.profiles.set(entId, profile);
 
-            const [typePrefix, name] = entId.includes(':') ? entId.split(':') : ['UNKNOWN', entId];
-            const type = (typePrefix.toUpperCase() as any) || 'DEVICE';
+            const activeFindings = this.findings.filter(f => f.employeeId === entId);
 
-            this.entities.push({
+            this.employees.push({
               id: entId,
-              label: name,
-              type: type,
-              role: this.deriveRole(entId),
+              employeeId: meta.employeeId,
+              name: meta.name,
+              label: meta.name,
+              type: 'EMPLOYEE',
+              department: meta.department,
+              role: meta.role,
+              orgUnit: meta.orgUnit,
+              employmentStatus: meta.status,
+              associatedDevices: meta.devices,
+              privilegeLevel: meta.privilegeLevel,
               eventCount: (p.baseline_event_count || 0) + (p.current_event_count || 0),
-              firstSeen: '2026-10-10T09:49:01Z',
-              lastSeen: '2026-10-21T13:09:00Z',
+              firstSeen: '2026-10-01T08:00:00Z',
+              lastSeen: '2026-10-18T10:39:00Z',
               riskScore: p.isolation_forest_risk_score ? Math.round(p.isolation_forest_risk_score) : Math.min(100, Math.round(bdi * 0.9)),
               deviationIndex: bdi,
               profileStatus: p.profile_status,
-              tags: this.deriveTags(entId, isAnom),
-              anomalous: isAnom
+              tags: this.deriveTags(entId, meta.department, meta.status, isAnom),
+              anomalous: isAnom || activeFindings.length > 0,
+              activeFindingsCount: activeFindings.length
             });
           }
         }
 
-        // Load graph data
+        // 3. Populate Known Fleet Devices
+        this.devices = [
+          {
+            id: 'host:WS-FIN-01',
+            label: 'Finance Lead Workstation (WS-FIN-01)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:elena.rostova',
+            assignedEmployeeName: 'Elena Rostova',
+            department: 'Finance',
+            operatingSystem: 'Windows 11 Enterprise (Build 26100)',
+            ipAddress: '10.0.1.45',
+            lastActive: '2026-10-16T21:05:00Z',
+            riskLevel: 'CRITICAL',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-FIN-02',
+            label: 'Finance Analyst Workstation (WS-FIN-02)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:alex.vance',
+            assignedEmployeeName: 'Alex Vance',
+            department: 'Finance',
+            operatingSystem: 'Windows 11 Enterprise',
+            ipAddress: '10.0.1.48',
+            lastActive: '2026-10-18T09:45:00Z',
+            riskLevel: 'LOW',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-ENG-42',
+            label: 'DevOps Lead Terminal (WS-ENG-42)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:sarah.connor',
+            assignedEmployeeName: 'Sarah Connor',
+            department: 'Engineering',
+            operatingSystem: 'Ubuntu 24.04 LTS (Kernel 6.8)',
+            ipAddress: '10.0.2.88',
+            lastActive: '2026-10-18T10:30:00Z',
+            riskLevel: 'LOW',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-ENG-19',
+            label: 'SRE Cloud Workstation (WS-ENG-19)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:david.clark',
+            assignedEmployeeName: 'David Clark',
+            department: 'Engineering',
+            operatingSystem: 'Fedora Workstation 40',
+            ipAddress: '10.0.2.91',
+            lastActive: '2026-10-18T02:30:00Z',
+            riskLevel: 'HIGH',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-IT-08',
+            label: 'Admin Workstation (WS-IT-08)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:marcus.wright',
+            assignedEmployeeName: 'Marcus Wright',
+            department: 'IT Operations',
+            operatingSystem: 'Windows 11 Pro Admin Edition',
+            ipAddress: '10.0.3.12',
+            lastActive: '2026-10-17T23:35:00Z',
+            riskLevel: 'CRITICAL',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-HR-05',
+            label: 'HR Management Terminal (WS-HR-05)',
+            deviceType: 'WORKSTATION',
+            assignedEmployeeId: 'user:rachel.kim',
+            assignedEmployeeName: 'Rachel Kim',
+            department: 'Human Resources',
+            operatingSystem: 'macOS Sequoia 15.1',
+            ipAddress: '10.0.4.15',
+            lastActive: '2026-10-18T09:20:00Z',
+            riskLevel: 'LOW',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-LEG-01',
+            label: 'Legal Counsel Laptop (WS-LEG-01)',
+            deviceType: 'LAPTOP',
+            assignedEmployeeId: 'user:jonathan.hayes',
+            assignedEmployeeName: 'Jonathan Hayes',
+            department: 'Legal & Compliance',
+            operatingSystem: 'Windows 11 Enterprise (BitLocker Active)',
+            ipAddress: '10.0.4.30',
+            lastActive: '2026-10-18T08:50:00Z',
+            riskLevel: 'LOW',
+            isMonitored: true
+          },
+          {
+            id: 'host:WS-SALES-11',
+            label: 'Field Sales Laptop (WS-SALES-11)',
+            deviceType: 'LAPTOP',
+            assignedEmployeeId: 'user:lisa.tanaka',
+            assignedEmployeeName: 'Lisa Tanaka',
+            department: 'Sales & Accounts',
+            operatingSystem: 'Windows 11 Enterprise',
+            ipAddress: '10.0.5.19',
+            lastActive: '2026-10-18T10:15:00Z',
+            riskLevel: 'LOW',
+            isMonitored: true
+          },
+          {
+            id: 'srv:DC01.corp.local',
+            label: 'Primary Domain Controller (srv:DC01)',
+            deviceType: 'SERVER',
+            assignedEmployeeName: 'Enterprise Domain Controllers',
+            department: 'IT Operations',
+            operatingSystem: 'Windows Server 2022 Datacenter',
+            ipAddress: '10.0.0.10',
+            lastActive: '2026-10-18T10:39:00Z',
+            riskLevel: 'HIGH',
+            isMonitored: true
+          },
+          {
+            id: 'srv:FILE01.corp.local',
+            label: 'Corporate Confidential Storage (srv:FILE01)',
+            deviceType: 'SERVER',
+            assignedEmployeeName: 'Corporate Storage Services',
+            department: 'Finance / Corporate',
+            operatingSystem: 'Windows Server 2022 Datacenter',
+            ipAddress: '10.0.0.15',
+            lastActive: '2026-10-18T10:35:00Z',
+            riskLevel: 'MEDIUM',
+            isMonitored: true
+          },
+          {
+            id: 'usb:REMOVABLE_SANDISK_32G',
+            label: 'Removable Flash Media (SanDisk Ultra 32GB)',
+            deviceType: 'REMOVABLE_USB',
+            assignedEmployeeId: 'user:elena.rostova',
+            assignedEmployeeName: 'Elena Rostova (Attached)',
+            department: 'Finance',
+            operatingSystem: 'exFAT Volume Serial: 8A44-B219',
+            ipAddress: 'host:WS-FIN-01 [USB Bus 002]',
+            lastActive: '2026-10-16T20:55:00Z',
+            riskLevel: 'CRITICAL',
+            isMonitored: false
+          }
+        ];
+
+        // 4. Load Graph Data
         if (data.graph) {
           this.graphNodes = data.graph.nodes || [];
-          this.graphEdges = (data.graph.edges || []).slice(0, 500); // Keep graph interactive and responsive
+          this.graphEdges = (data.graph.edges || []).slice(0, 600);
         }
 
-        // Load investigations from correlated attack chains
+        // 5. Load Digital Forensics Investigations
         if (data.attack_chains && Array.isArray(data.attack_chains)) {
           this.investigations = data.attack_chains.map((chain: any, idx: number) => ({
             id: `INV-2026-${(idx + 101).toString()}`,
             title: chain.title,
-            status: idx === 0 ? 'In Progress' : idx === 1 ? 'Needs Review' : idx === 2 ? 'New' : 'Resolved',
-            severity: idx < 2 ? 'CRITICAL' : idx < 4 ? 'HIGH' : 'MEDIUM',
+            status: idx === 0 ? 'In Progress' : idx === 1 ? 'Needs Review' : idx === 2 ? 'In Progress' : 'Resolved',
+            severity: idx < 2 ? 'CRITICAL' : idx < 3 ? 'HIGH' : 'MEDIUM',
             createdAt: chain.start_time || new Date().toISOString(),
             updatedAt: chain.end_time || new Date().toISOString(),
-            leadAnalyst: idx % 2 === 0 ? 'Dr. Sarah Lin (Lead Forensic Analyst)' : 'Marcus Vance (SOC Tier 3)',
-            summary: chain.investigative_hypothesis || 'Automated behavioral anomaly correlation identified multi-stage lateral movement pattern.',
+            leadAnalyst: idx % 2 === 0 ? 'Dr. Sarah Lin (Lead Digital Forensics Analyst)' : 'Marcus Vance (Senior Insider Threat Investigator)',
+            summary: chain.investigative_hypothesis || 'Automated multi-stage telemetry correlation identified significant behavioral deviation sequence.',
             involvedEntities: chain.involved_entities || [],
             correlatedChains: [chain.chain_id],
             evidenceEventIds: chain.evidence_event_ids || [],
@@ -120,32 +466,32 @@ class DataStore {
               {
                 id: `NOTE-${idx}-1`,
                 author: 'CyberDNA Analytics Pipeline',
-                timestamp: chain.start_time || '2026-10-21T02:00:00Z',
-                text: `Automated correlation triggered by ${chain.tactic_sequence?.join(' -> ')}`,
+                timestamp: chain.start_time || '2026-10-16T20:00:00Z',
+                text: `Automated incident correlation triggered by ${chain.tactic_sequence?.join(' -> ')}.`,
                 category: 'CORRELATION'
               },
               {
                 id: `NOTE-${idx}-2`,
-                author: 'Investigator',
-                timestamp: chain.end_time || '2026-10-21T04:15:00Z',
-                text: 'Preliminary inspection indicates anomalous off-hours access followed by staging. Host isolation recommended.',
-                category: 'HYPOTHESIS'
+                author: 'Digital Forensics Case Lead',
+                timestamp: chain.end_time || '2026-10-17T08:30:00Z',
+                text: 'Telemetry confirms timestamped sequence across endpoint, storage, and egress boundary. Host memory preservation initiated.',
+                category: 'OBSERVED_FACT'
               }
             ],
             observedFacts: chain.observed_facts || [
-              'Authentication burst preceded lateral movement',
-              'Subsequent anomalous outbound traffic recorded'
+              'Timestamped telemetry confirms sequence of operations',
+              'Threshold exceeded baseline by multiple standard deviations'
             ],
             hypotheses: [
-              chain.investigative_hypothesis || 'Adversary leveraged compromised domain credentials for reconnaissance and staging.'
+              chain.investigative_hypothesis || 'Observed sequence requires formal interview and validation against authorized business activities.'
             ],
-            confidence: chain.confidence_score || 0.85,
-            limitations: chain.limitations || 'Observation window restricted to perimeter telemetry; endpoint memory extraction required for absolute attribution.'
+            confidence: chain.confidence_score || 0.88,
+            limitations: chain.limitations || 'Perimeter and endpoint logs establish transfer metrics; complete file content reconstruction requires bitstream drive image.'
           }));
         }
       }
 
-      // Load Events from CSV
+      // 6. Load Activity Events from CSV
       if (fs.existsSync(eventsCsvPath)) {
         const csvContent = fs.readFileSync(eventsCsvPath, 'utf-8');
         const lines = csvContent.split('\n').filter(l => l.trim().length > 0);
@@ -158,71 +504,80 @@ class DataStore {
               row[h] = cols[idx];
             });
 
+            const empId = row.entity_id || 'user:unknown';
+            const meta = EMPLOYEE_METADATA[empId];
+
             this.events.push({
               event_id: row.event_id || `EVT-${i}`,
               timestamp: row.timestamp || new Date().toISOString(),
               event_type: row.event_type || 'UNKNOWN',
-              entity_id: row.entity_id || 'UNKNOWN',
-              entity_type: row.entity_type || 'USER',
+              employee_id: empId,
+              employee_name: meta ? meta.name : empId.replace('user:', ''),
+              department: meta ? meta.department : 'Operations',
+              entity_id: empId,
+              entity_type: (row.entity_type || 'EMPLOYEE') as any,
               severity: (row.severity || 'INFO') as any,
-              source_ip: row.source_ip || '10.0.0.1',
-              destination_ip: row.destination_ip || '10.0.0.2',
+              device_id: meta ? meta.devices[0] : (row.source_ip || 'host:WS-01'),
+              target_resource: row.process_name || row.destination_ip || 'Internal Network',
+              source_ip: row.source_ip || '10.0.1.50',
+              destination_ip: row.destination_ip || '10.0.2.100',
               destination_port: parseInt(row.destination_port || '0', 10),
               protocol: row.protocol || 'TCP',
               bytes_transferred: parseFloat(row.bytes_transferred || '0'),
+              is_off_hours: parseInt(row.is_off_hours || '0', 10) === 1,
               process_name: row.process_name || 'system',
-              rule_triggered: row.rule_triggered || 'NORMAL_TRAFFIC',
+              rule_triggered: row.rule_triggered || 'NORMAL_ACTIVITY',
               is_synthetic: parseInt(row.is_synthetic || '1', 10)
             });
           }
         }
       }
 
-      // Initialize Data Sources
+      // 7. Initialize Data Sources
       this.dataSources = [
         {
           id: 'DS-01',
-          name: 'Enterprise Security Telemetry (Active Session Logs)',
+          name: 'Apex Global Technologies — Unified Employee Telemetry',
           format: 'CSV',
-          recordCount: this.events.length || 2231,
-          sizeBytes: 345800,
-          startDate: '2026-10-10T09:49:01Z',
-          endDate: '2026-10-21T13:09:00Z',
+          recordCount: this.events.length || 2173,
+          sizeBytes: 384500,
+          startDate: '2026-10-01T16:08:26Z',
+          endDate: '2026-10-18T10:39:00Z',
           validationStatus: 'VALIDATED',
-          provenance: 'Internal SIEM & NetFlow Ingestion Stream',
-          lastIngested: '2026-10-24T00:58:30Z',
-          isDemo: false
+          provenance: 'Conforms to CERT Insider Threat Test Dataset Schema (Logon, Device, File, Web, Email)',
+          lastIngested: '2026-10-24T03:10:00Z',
+          isDemo: true
         },
         {
           id: 'DS-02',
-          name: 'Big Data Processed Analytical Store (PySpark / PyArrow)',
+          name: 'PySpark & PyArrow Partitioned Analytical Parquet Store',
           format: 'PARQUET',
-          recordCount: this.events.length || 2231,
-          sizeBytes: 124500,
-          startDate: '2026-10-10T09:49:01Z',
-          endDate: '2026-10-21T13:09:00Z',
+          recordCount: this.events.length || 2173,
+          sizeBytes: 154200,
+          startDate: '2026-10-01T16:08:26Z',
+          endDate: '2026-10-18T10:39:00Z',
           validationStatus: 'VALIDATED',
-          provenance: 'Normalized Feature Store & Partitioned Telemetry',
-          lastIngested: '2026-10-24T00:59:15Z',
+          provenance: 'Normalized Feature Store & Snappy-Compressed Columnar Partitions',
+          lastIngested: '2026-10-24T03:10:02Z',
           isDemo: false
         },
         {
           id: 'DS-03',
-          name: 'LANL / BZAR Benchmark Cyber Defense Corpus (Reference)',
+          name: 'CERT Insider Threat Test Dataset r4.2 (Carnegie Mellon SEI Benchmark)',
           format: 'PARQUET',
-          recordCount: 154200,
-          sizeBytes: 24890000,
-          startDate: '2026-08-01T00:00:00Z',
-          endDate: '2026-09-30T23:59:59Z',
-          validationStatus: 'VALIDATED',
-          provenance: 'Academic Research Benchmark (MITRE ATT&CK Evaluation)',
-          lastIngested: '2026-10-20T14:10:00Z',
-          isDemo: true
+          recordCount: 0,
+          sizeBytes: 0,
+          startDate: '2010-01-01T00:00:00Z',
+          endDate: '2011-05-31T23:59:59Z',
+          validationStatus: 'VALIDATION_WARNING',
+          provenance: 'National Insider Threat Center (NITC) Ground-Truth Evaluation Suite',
+          lastIngested: 'Not Yet Acquired',
+          isDemo: false
         }
       ];
 
       this.isLoaded = true;
-      console.log(`[+] CyberDNA DataStore initialized: ${this.entities.length} entities, ${this.events.length} events, ${this.investigations.length} investigations.`);
+      console.log(`[+] CyberDNA DataStore initialized: ${this.employees.length} employees, ${this.findings.length} findings, ${this.devices.length} devices, ${this.events.length} events, ${this.investigations.length} investigations.`);
     } catch (err) {
       console.error('[!] Failed to initialize DataStore from disk:', err);
     }
@@ -232,12 +587,10 @@ class DataStore {
     const dist: number[] = [];
     for (let h = 0; h < 24; h++) {
       if (!isCurrent) {
-        // Normal business hours baseline (peaking 9 to 17)
         dist.push(h >= 9 && h <= 17 ? Math.floor(15 + Math.sin((h - 9) * 0.35) * 20) : Math.floor(Math.random() * 2));
       } else {
         if (bdi > 50) {
-          // Anomalous activity: spikes at 2am - 4am
-          dist.push(h >= 1 && h <= 4 ? Math.floor(35 + Math.random() * 25) : Math.floor(5 + Math.random() * 10));
+          dist.push(h >= 20 || h <= 3 ? Math.floor(35 + Math.random() * 25) : Math.floor(5 + Math.random() * 10));
         } else {
           dist.push(h >= 9 && h <= 17 ? Math.floor(12 + Math.random() * 15) : Math.floor(Math.random() * 3));
         }
@@ -246,38 +599,80 @@ class DataStore {
     return dist;
   }
 
-  private deriveRole(entId: string): string {
-    if (entId.includes('alex')) return 'Financial Analyst';
-    if (entId.includes('sarah')) return 'DevOps Lead';
-    if (entId.includes('david')) return 'Network Administrator';
-    if (entId.includes('elena')) return 'Third-Party Contractor';
-    if (entId.includes('service')) return 'Automated Backup Daemon';
-    if (entId.includes('FIN')) return 'Finance Department Workstation';
-    if (entId.includes('ENG')) return 'Engineering Workstation';
-    if (entId.includes('DC01')) return 'Primary Domain Controller';
-    if (entId.includes('SQL01')) return 'Production Database Cluster';
-    if (entId.includes('cloud-sync')) return 'Unapproved External Cloud Storage';
-    return 'Managed Telemetry Node';
-  }
-
-  private deriveTags(entId: string, isAnom: boolean): string[] {
-    const tags: string[] = [];
-    if (entId.startsWith('user:')) tags.push('Identity');
-    if (entId.startsWith('host:')) tags.push('Endpoint');
-    if (entId.startsWith('srv:')) tags.push('Infrastructure', 'High Value Target');
-    if (entId.startsWith('domain:')) tags.push('DNS', 'External');
-    if (entId.startsWith('ip:')) tags.push('Network');
-    if (isAnom) tags.push('Flagged Deviation', 'SOC Review');
+  private deriveTags(entId: string, dept: string, status: string, isAnom: boolean): string[] {
+    const tags: string[] = [dept];
+    if (status === 'NOTICE_PERIOD') tags.push('Notice Period');
+    if (entId.includes('marcus') || entId.includes('service')) tags.push('Elevated Privilege');
+    if (isAnom) tags.push('Behavioral Deviation', 'Analyst Review');
     return tags;
   }
 
   // Query API methods
+  public getEmployees(filter?: { department?: string; anomalous?: boolean; search?: string }): EmployeeSummary[] {
+    let result = this.employees;
+    if (filter?.department) {
+      result = result.filter(e => e.department.toLowerCase() === filter.department?.toLowerCase());
+    }
+    if (filter?.anomalous !== undefined) {
+      result = result.filter(e => e.anomalous === filter.anomalous);
+    }
+    if (filter?.search) {
+      const q = filter.search.toLowerCase();
+      result = result.filter(e =>
+        e.id.toLowerCase().includes(q) ||
+        e.name.toLowerCase().includes(q) ||
+        e.department.toLowerCase().includes(q) ||
+        e.role.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }
+
+  // Alias for backwards compatibility
   public getEntities(): EntitySummary[] {
-    return this.entities;
+    return this.employees;
+  }
+
+  public getEmployeeById(id: string): EmployeeSummary | undefined {
+    return this.employees.find(e => e.id.toLowerCase() === id.toLowerCase() || e.employeeId.toLowerCase() === id.toLowerCase());
   }
 
   public getEntityById(id: string): EntitySummary | undefined {
-    return this.entities.find(e => e.id.toLowerCase() === id.toLowerCase());
+    return this.getEmployeeById(id);
+  }
+
+  public getDevices(): Device[] {
+    return this.devices;
+  }
+
+  public getDeviceById(id: string): Device | undefined {
+    return this.devices.find(d => d.id.toLowerCase() === id.toLowerCase());
+  }
+
+  public getFindings(filter?: { employeeId?: string; category?: string; reviewStatus?: string }): ThreatFinding[] {
+    let result = this.findings;
+    if (filter?.employeeId) {
+      const eid = filter.employeeId.toLowerCase();
+      result = result.filter(f => f.employeeId.toLowerCase() === eid);
+    }
+    if (filter?.category) {
+      result = result.filter(f => f.category === filter.category);
+    }
+    if (filter?.reviewStatus) {
+      result = result.filter(f => f.reviewStatus === filter.reviewStatus);
+    }
+    return result;
+  }
+
+  public getFindingById(id: string): ThreatFinding | undefined {
+    return this.findings.find(f => f.id.toLowerCase() === id.toLowerCase());
+  }
+
+  public updateFindingReviewStatus(id: string, status: 'NEW' | 'UNDER_REVIEW' | 'ESCALATED' | 'BENIGN' | 'RESOLVED'): ThreatFinding | null {
+    const finding = this.getFindingById(id);
+    if (!finding) return null;
+    finding.reviewStatus = status;
+    return finding;
   }
 
   public getProfileByEntityId(id: string): BehavioralProfile | undefined {
@@ -286,31 +681,54 @@ class DataStore {
 
   public getEvents(filter: {
     entityId?: string;
+    employeeId?: string;
     eventType?: string;
+    category?: string;
     severity?: string;
+    deviceId?: string;
     search?: string;
     limit?: number;
     offset?: number;
-  }): { total: number; events: SecurityEvent[] } {
+  }): { total: number; events: ActivityEvent[] } {
     let result = this.events;
 
-    if (filter.entityId) {
-      const eid = filter.entityId.toLowerCase();
-      result = result.filter(e => e.entity_id.toLowerCase().includes(eid));
+    const targetEmp = filter.employeeId || filter.entityId;
+    if (targetEmp) {
+      const eid = targetEmp.toLowerCase();
+      result = result.filter(e => e.employee_id.toLowerCase().includes(eid) || e.entity_id.toLowerCase().includes(eid));
     }
     if (filter.eventType) {
       const etype = filter.eventType.toUpperCase();
       result = result.filter(e => e.event_type.toUpperCase().includes(etype));
     }
+    if (filter.category) {
+      const cat = filter.category.toUpperCase();
+      if (cat === 'LOGON') {
+        result = result.filter(e => e.event_type.includes('LOGON') || e.event_type.includes('LOGOFF') || e.event_type.includes('AUTH'));
+      } else if (cat === 'FILE') {
+        result = result.filter(e => e.event_type.includes('FILE'));
+      } else if (cat === 'REMOVABLE') {
+        result = result.filter(e => e.event_type.includes('REMOVABLE') || e.event_type.includes('USB'));
+      } else if (cat === 'WEB_CLOUD') {
+        result = result.filter(e => e.event_type.includes('WEB') || e.event_type.includes('CLOUD') || e.event_type.includes('DNS'));
+      } else if (cat === 'EMAIL') {
+        result = result.filter(e => e.event_type.includes('EMAIL'));
+      }
+    }
     if (filter.severity) {
       const sev = filter.severity.toUpperCase();
       result = result.filter(e => e.severity.toUpperCase() === sev);
+    }
+    if (filter.deviceId) {
+      const dev = filter.deviceId.toLowerCase();
+      result = result.filter(e => e.device_id.toLowerCase().includes(dev));
     }
     if (filter.search) {
       const s = filter.search.toLowerCase();
       result = result.filter(e =>
         e.event_id.toLowerCase().includes(s) ||
-        e.entity_id.toLowerCase().includes(s) ||
+        e.employee_id.toLowerCase().includes(s) ||
+        e.employee_name.toLowerCase().includes(s) ||
         e.process_name.toLowerCase().includes(s) ||
         e.source_ip.toLowerCase().includes(s) ||
         e.destination_ip.toLowerCase().includes(s) ||
@@ -337,12 +755,12 @@ class DataStore {
   public createInvestigation(inv: Partial<Investigation>): Investigation {
     const newInv: Investigation = {
       id: `INV-2026-${(this.investigations.length + 101).toString()}`,
-      title: inv.title || 'Untitled Forensic Investigation',
+      title: inv.title || 'Untitled Insider Threat Investigation',
       status: 'New',
       severity: inv.severity || 'MEDIUM',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      leadAnalyst: inv.leadAnalyst || 'Lead Forensic Investigator',
+      leadAnalyst: inv.leadAnalyst || 'Senior Forensics Analyst',
       summary: inv.summary || 'Analyst created case based on behavioral deviation indicator.',
       involvedEntities: inv.involvedEntities || [],
       correlatedChains: inv.correlatedChains || [],
@@ -358,8 +776,8 @@ class DataStore {
       ],
       observedFacts: inv.observedFacts || [],
       hypotheses: inv.hypotheses || [],
-      confidence: inv.confidence || 0.70,
-      limitations: inv.limitations || 'Initial assessment pending endpoint triage'
+      confidence: inv.confidence || 0.75,
+      limitations: inv.limitations || 'Initial assessment pending full endpoint triage.'
     };
     this.investigations.unshift(newInv);
     return newInv;
@@ -402,10 +820,69 @@ class DataStore {
   }
 
   public getOverviewStats() {
-    const anomalousCount = this.entities.filter(e => e.anomalous || e.deviationIndex >= 50).length;
-    const openInvestigations = this.investigations.filter(i => i.status !== 'Resolved').length;
+    const anomalousEmployees = this.employees.filter(e => e.anomalous || e.deviationIndex >= 50);
+    const pendingFindings = this.findings.filter(f => f.reviewStatus === 'NEW' || f.reviewStatus === 'UNDER_REVIEW');
+    const openInvestigations = this.investigations.filter(i => i.status !== 'Resolved');
 
-    // Severity breakdown
+    // Activity breakdown by category
+    const activityByCategory = {
+      logonLogoff: 0,
+      fileActivity: 0,
+      removableDevice: 0,
+      webCloud: 0,
+      emailActivity: 0
+    };
+
+    this.events.forEach(e => {
+      const et = e.event_type.toUpperCase();
+      if (et.includes('LOGON') || et.includes('LOGOFF') || et.includes('AUTH')) {
+        activityByCategory.logonLogoff++;
+      } else if (et.includes('REMOVABLE') || et.includes('USB')) {
+        activityByCategory.removableDevice++;
+      } else if (et.includes('FILE')) {
+        activityByCategory.fileActivity++;
+      } else if (et.includes('WEB') || et.includes('CLOUD') || et.includes('DNS')) {
+        activityByCategory.webCloud++;
+      } else if (et.includes('EMAIL')) {
+        activityByCategory.emailActivity++;
+      }
+    });
+
+    // Department breakdown
+    const departmentMap: Record<string, { totalEvents: number; employees: number; anomalousCount: number }> = {};
+    this.employees.forEach(emp => {
+      if (!departmentMap[emp.department]) {
+        departmentMap[emp.department] = { totalEvents: 0, employees: 0, anomalousCount: 0 };
+      }
+      departmentMap[emp.department].employees++;
+      if (emp.anomalous) departmentMap[emp.department].anomalousCount++;
+    });
+
+    this.events.forEach(e => {
+      if (departmentMap[e.department]) {
+        departmentMap[e.department].totalEvents++;
+      }
+    });
+
+    const departmentSummaries = Object.entries(departmentMap).map(([dept, d]) => ({
+      department: dept,
+      employeesCount: d.employees,
+      eventsCount: d.totalEvents,
+      anomalousCount: d.anomalousCount
+    }));
+
+    // Volume trends over time
+    const dayMap = new Map<string, number>();
+    this.events.forEach(e => {
+      const d = e.timestamp.slice(0, 10);
+      dayMap.set(d, (dayMap.get(d) || 0) + 1);
+    });
+
+    const volumeTrends = Array.from(dayMap.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Severity distribution
     const severityCount = {
       CRITICAL: 0,
       HIGH: 0,
@@ -419,40 +896,25 @@ class DataStore {
       }
     });
 
-    // Volume over time (daily groups)
-    const dayMap = new Map<string, number>();
-    this.events.forEach(e => {
-      const d = e.timestamp.slice(0, 10);
-      dayMap.set(d, (dayMap.get(d) || 0) + 1);
-    });
-
-    const volumeTrends = Array.from(dayMap.entries())
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    // Top deviating entities
-    const topDeviating = [...this.entities]
-      .sort((a, b) => b.deviationIndex - a.deviationIndex)
-      .slice(0, 5);
-
-    // Recent anomalies
-    const recentAnomalies = this.events
-      .filter(e => e.severity === 'CRITICAL' || e.severity === 'HIGH')
-      .slice(0, 8);
-
     return {
+      organizationName: 'Apex Global Technologies (Fictional)',
+      isSyntheticDemo: true,
+      demoNotice: 'DEMO ENVIRONMENT: Operating on synthetic behavioral telemetry conforming to CERT Insider Threat Test Dataset schemas. Ground-truth research datasets remain isolated.',
+      totalEmployees: this.employees.length,
       totalEventsProcessed: this.events.length,
-      totalEntitiesProfiled: this.entities.length,
-      anomaliesFlagged: anomalousCount,
-      openInvestigationsCount: openInvestigations,
+      totalProfilesGenerated: this.profiles.size,
+      anomaliesIdentified: this.findings.length,
+      pendingFindingsReviewCount: pendingFindings.length,
+      openInvestigationsCount: openInvestigations.length,
       correlatedChainsCount: this.investigations.length,
-      dataFreshness: '2026-10-24T00:59:15Z',
-      activeDataSourcesCount: this.dataSources.length,
-      severityDistribution: severityCount,
+      activityByCategory,
+      departmentSummaries,
       volumeTrends,
-      topDeviatingEntities: topDeviating,
-      recentAnomalies,
-      recentInvestigations: this.investigations.slice(0, 5)
+      severityDistribution: severityCount,
+      topDeviatingEmployees: [...this.employees].sort((a, b) => b.deviationIndex - a.deviationIndex).slice(0, 5),
+      recentFindings: this.findings.slice(0, 5),
+      recentInvestigations: this.investigations.slice(0, 4),
+      pipelineMetadata: this.pipelineMetadata
     };
   }
 }

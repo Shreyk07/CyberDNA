@@ -130,5 +130,31 @@ class TestCyberDNAPipeline(unittest.TestCase):
         self.assertIn("T1110", chains[0]["tactic_sequence"][0])
         self.assertEqual(chains[0]["primary_entity"], "user:victim.account")
 
+    def test_spark_pipeline_rules(self):
+        """Verifies the 3 explainable rules in the simplified Spark pipeline."""
+        from analytics.cyberdna_pipeline.spark_pipeline import CyberDNASparkPipeline
+        pipeline = CyberDNASparkPipeline()
+        summaries = [
+            {"entity_id": "user:elena.rostova", "total_events": 500, "usb_usage_count": 1, "file_access_count": 120, "off_hours_count": 10},
+            {"entity_id": "user:marcus.wright", "total_events": 200, "usb_usage_count": 0, "file_access_count": 10, "off_hours_count": 8},
+            {"entity_id": "user:david.clark", "total_events": 180, "usb_usage_count": 0, "file_access_count": 15, "off_hours_count": 4},
+            {"entity_id": "user:rachel.kim", "total_events": 150, "usb_usage_count": 0, "file_access_count": 8, "off_hours_count": 0}
+        ]
+        dummy_df = pd.DataFrame([{"event_id": "EVT-1", "entity_id": "user:elena.rostova"}])
+        findings = pipeline._apply_simple_rules(summaries, dummy_df)
+        self.assertEqual(len(findings), 3)
+        finding_ids = [f["id"] for f in findings]
+        self.assertIn("ALERT-RULE-01", finding_ids)
+        self.assertIn("ALERT-RULE-02", finding_ids)
+        self.assertIn("ALERT-RULE-03", finding_ids)
+
+        # Verify explainable questions exist on findings
+        elena_alert = next(f for f in findings if f["id"] == "ALERT-RULE-01")
+        self.assertIn("what_happened", elena_alert)
+        self.assertIn("why_flagged", elena_alert)
+        self.assertIn("employee_involved", elena_alert)
+        self.assertIn("next_steps", elena_alert)
+
 if __name__ == "__main__":
     unittest.main()
+
